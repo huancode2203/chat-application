@@ -5,10 +5,16 @@
     <Compile Update="Forms\ChatForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Update="Forms\CreateGroupDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Update="Forms\ForgotPasswordForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Update="Forms\LoginForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Forms\MemberDialog.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Update="Forms\RegisterForm.cs">
