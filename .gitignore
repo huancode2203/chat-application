@@ -1,0 +1,41 @@
+# Build folders
+bin/
+obj/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Visual Studio
+.vs/
+.vscode/
+
+# Rider
+.idea/
+
+# OS generated
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# NuGet packages
+*.nupkg
+*.snupkg
+packages/
+
+# Publish / deploy
+*.Publish.xml
+*.publishsettings
+
+# Debug / temporary
+*.pdb
+*.exe
+*.dll
+
+# Sensitive config
+appsettings.*.json      # Nếu bạn lưu credentials
+secrets.json
