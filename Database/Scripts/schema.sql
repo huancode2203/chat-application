@@ -326,16 +326,399 @@ BEGIN
 END;
 /
 
--- 7) All stored procedures (account mgmt, conversation mgmt, send message, attachments, ban/mute, etc.)
--- NOTE: Procedures are long — include all procedures used earlier (SP_TAO_TAIKHOAN, SP_DOI_MATKHAU, SP_UPLOAD_ATTACHMENT,
--- SP_GUI_TINNHAN, SP_GUI_TINNHAN_WITH_ATTACH, SP_TAO_CUOCTROCHUYEN, SP_THEM_THANHVIEN, SP_XOA_THANHVIEN,
--- SP_SET_TRUONGNHOM, SP_XOA_CUOCTROCHUYEN, SP_BAN_MEMBER, SP_UNBAN_MEMBER, SP_MUTE_MEMBER, SP_UNMUTE_MEMBER,
--- SP_BAN_USER_GLOBAL, SP_UNBAN_USER_GLOBAL, SP_LAY_THANHVIEN_CUOCTROCHUYEN_CHITIET, SP_XEM_CHITIET_NGUOIDUNG,
--- SP_CAPNHAT_THONGTIN_BAN, SP_LAY_CHITIET_CUOCTROCHUYEN, SP_XOA_TAIKHOAN_TOAN_BO, SP_GUI_TINNHAN_RIENG_AND_SEND)
--- For brevity here, recreate the same procedures you had in the earlier full script; ensure no INSERTs in this file.
--- (Insert-free DDL includes all CREATE OR REPLACE PROCEDURE ... END ... /)
--- Paste all procedure bodies here from your original script (omitted in this snippet for brevity).
+-- 7) Stored Procedures
+
+-- SP_TAO_TAIKHOAN: Tạo tài khoản mới
+CREATE OR REPLACE PROCEDURE SP_TAO_TAIKHOAN(
+  p_matk VARCHAR2,
+  p_tentk VARCHAR2,
+  p_password_hash VARCHAR2,
+  p_mavaitro VARCHAR2,
+  p_clearance NUMBER
+) AS
+BEGIN
+  INSERT INTO TAIKHOAN(MATK, TENTK, PASSWORD_HASH, MAVAITRO, CLEARANCELEVEL)
+  VALUES(p_matk, p_tentk, p_password_hash, p_mavaitro, p_clearance);
+  COMMIT;
+END;
+/
+
+-- SP_DOI_MATKHAU: Đổi mật khẩu
+CREATE OR REPLACE PROCEDURE SP_DOI_MATKHAU(
+  p_matk VARCHAR2,
+  p_new_password_hash VARCHAR2
+) AS
+BEGIN
+  UPDATE TAIKHOAN SET PASSWORD_HASH = p_new_password_hash WHERE MATK = p_matk;
+  COMMIT;
+END;
+/
+
+-- SP_TAO_CUOCTROCHUYEN: Tạo cuộc trò chuyện mới
+CREATE OR REPLACE PROCEDURE SP_TAO_CUOCTROCHUYEN(
+  p_mactc VARCHAR2,
+  p_maloaictc VARCHAR2,
+  p_tenctc VARCHAR2,
+  p_nguoiql VARCHAR2,
+  p_is_private VARCHAR2,
+  p_created_by VARCHAR2
+) AS
+BEGIN
+  INSERT INTO CUOCTROCHUYEN(MACTC, MALOAICTC, TENCTC, NGUOIQL, IS_PRIVATE, CREATED_BY)
+  VALUES(p_mactc, p_maloaictc, p_tenctc, p_nguoiql, p_is_private, p_created_by);
+  
+  -- Tự động thêm người tạo làm owner
+  INSERT INTO THANHVIEN(MACTC, MATK, QUYEN, MAPHANQUYEN)
+  VALUES(p_mactc, p_created_by, 'owner', 'OWNER');
+  
+  COMMIT;
+END;
+/
+
+-- SP_THEM_THANHVIEN: Thêm thành viên vào cuộc trò chuyện
+CREATE OR REPLACE PROCEDURE SP_THEM_THANHVIEN(
+  p_mactc VARCHAR2,
+  p_matk VARCHAR2,
+  p_quyen VARCHAR2 DEFAULT 'member',
+  p_maphanquyen VARCHAR2 DEFAULT 'MEMBER'
+) AS
+  v_count NUMBER;
+BEGIN
+  -- Kiểm tra member đã tồn tại chưa
+  SELECT COUNT(*) INTO v_count FROM THANHVIEN 
+  WHERE MACTC = p_mactc AND MATK = p_matk AND DELETED_BY_MEMBER = 0;
+  
+  IF v_count = 0 THEN
+    INSERT INTO THANHVIEN(MACTC, MATK, QUYEN, MAPHANQUYEN)
+    VALUES(p_mactc, p_matk, p_quyen, p_maphanquyen);
+    COMMIT;
+  ELSE
+    RAISE_APPLICATION_ERROR(-20080, 'Member already exists in conversation.');
+  END IF;
+END;
+/
+
+-- SP_XOA_THANHVIEN: Xóa thành viên khỏi cuộc trò chuyện
+CREATE OR REPLACE PROCEDURE SP_XOA_THANHVIEN(
+  p_mactc VARCHAR2,
+  p_matk VARCHAR2
+) AS
+BEGIN
+  DELETE FROM THANHVIEN WHERE MACTC = p_mactc AND MATK = p_matk;
+  COMMIT;
+END;
+/
+
+-- SP_SET_TRUONGNHOM: Đặt trưởng nhóm (owner)
+CREATE OR REPLACE PROCEDURE SP_SET_TRUONGNHOM(
+  p_mactc VARCHAR2,
+  p_matk VARCHAR2
+) AS
+BEGIN
+  -- Hạ tất cả owner hiện tại xuống admin
+  UPDATE THANHVIEN SET QUYEN = 'admin', MAPHANQUYEN = 'ADMIN'
+  WHERE MACTC = p_mactc AND QUYEN = 'owner';
+  
+  -- Nâng member được chọn lên owner
+  UPDATE THANHVIEN SET QUYEN = 'owner', MAPHANQUYEN = 'OWNER'
+  WHERE MACTC = p_mactc AND MATK = p_matk;
+  
+  -- Cập nhật NGUOIQL trong CUOCTROCHUYEN
+  UPDATE CUOCTROCHUYEN SET NGUOIQL = p_matk WHERE MACTC = p_mactc;
+  
+  COMMIT;
+END;
+/
+
+-- SP_XOA_CUOCTROCHUYEN: Xóa cuộc trò chuyện
+CREATE OR REPLACE PROCEDURE SP_XOA_CUOCTROCHUYEN(
+  p_mactc VARCHAR2
+) AS
+BEGIN
+  -- Xóa tất cả tin nhắn (cascade sẽ xóa attachments)
+  DELETE FROM TINNHAN WHERE MACTC = p_mactc;
+  
+  -- Xóa thành viên
+  DELETE FROM THANHVIEN WHERE MACTC = p_mactc;
+  
+  -- Xóa cuộc trò chuyện
+  DELETE FROM CUOCTROCHUYEN WHERE MACTC = p_mactc;
+  
+  COMMIT;
+END;
+/
+
+-- SP_BAN_MEMBER: Cấm thành viên trong nhóm
+CREATE OR REPLACE PROCEDURE SP_BAN_MEMBER(
+  p_mactc VARCHAR2,
+  p_matk VARCHAR2
+) AS
+BEGIN
+  UPDATE THANHVIEN SET IS_BANNED = 1 WHERE MACTC = p_mactc AND MATK = p_matk;
+  COMMIT;
+END;
+/
+
+-- SP_UNBAN_MEMBER: Bỏ cấm thành viên
+CREATE OR REPLACE PROCEDURE SP_UNBAN_MEMBER(
+  p_mactc VARCHAR2,
+  p_matk VARCHAR2
+) AS
+BEGIN
+  UPDATE THANHVIEN SET IS_BANNED = 0 WHERE MACTC = p_mactc AND MATK = p_matk;
+  COMMIT;
+END;
+/
+
+-- SP_MUTE_MEMBER: Tắt tiếng thành viên
+CREATE OR REPLACE PROCEDURE SP_MUTE_MEMBER(
+  p_mactc VARCHAR2,
+  p_matk VARCHAR2
+) AS
+BEGIN
+  UPDATE THANHVIEN SET IS_MUTED = 1 WHERE MACTC = p_mactc AND MATK = p_matk;
+  COMMIT;
+END;
+/
+
+-- SP_UNMUTE_MEMBER: Bỏ tắt tiếng
+CREATE OR REPLACE PROCEDURE SP_UNMUTE_MEMBER(
+  p_mactc VARCHAR2,
+  p_matk VARCHAR2
+) AS
+BEGIN
+  UPDATE THANHVIEN SET IS_MUTED = 0 WHERE MACTC = p_mactc AND MATK = p_matk;
+  COMMIT;
+END;
+/
+
+-- SP_BAN_USER_GLOBAL: Cấm user toàn hệ thống
+CREATE OR REPLACE PROCEDURE SP_BAN_USER_GLOBAL(
+  p_matk VARCHAR2
+) AS
+BEGIN
+  UPDATE TAIKHOAN SET IS_BANNED_GLOBAL = 1 WHERE MATK = p_matk;
+  COMMIT;
+END;
+/
+
+-- SP_UNBAN_USER_GLOBAL: Bỏ cấm user toàn hệ thống
+CREATE OR REPLACE PROCEDURE SP_UNBAN_USER_GLOBAL(
+  p_matk VARCHAR2
+) AS
+BEGIN
+  UPDATE TAIKHOAN SET IS_BANNED_GLOBAL = 0 WHERE MATK = p_matk;
+  COMMIT;
+END;
+/
+
+-- SP_UPLOAD_ATTACHMENT: Upload file attachment
+CREATE OR REPLACE PROCEDURE SP_UPLOAD_ATTACHMENT(
+  p_matk VARCHAR2,
+  p_filename VARCHAR2,
+  p_mimetype VARCHAR2,
+  p_filesize NUMBER,
+  p_filedata BLOB,
+  p_attach_id OUT NUMBER
+) AS
+BEGIN
+  INSERT INTO ATTACHMENT(MATK, FILENAME, MIMETYPE, FILESIZE, FILEDATA)
+  VALUES(p_matk, p_filename, p_mimetype, p_filesize, p_filedata)
+  RETURNING ATTACH_ID INTO p_attach_id;
+  COMMIT;
+END;
+/
+
+-- SP_GUI_TINNHAN: Gửi tin nhắn
+CREATE OR REPLACE PROCEDURE SP_GUI_TINNHAN(
+  p_mactc VARCHAR2,
+  p_matk VARCHAR2,
+  p_noidung CLOB,
+  p_securitylabel NUMBER,
+  p_matn OUT NUMBER
+) AS
+BEGIN
+  INSERT INTO TINNHAN(MACTC, MATK, NOIDUNG, SECURITYLABEL, MALOAITN, MATRANGTHAI)
+  VALUES(p_mactc, p_matk, p_noidung, p_securitylabel, 'TEXT', 'ACTIVE')
+  RETURNING MATN INTO p_matn;
+  COMMIT;
+END;
+/
+
+-- SP_GUI_TINNHAN_WITH_ATTACH: Gửi tin nhắn kèm attachment
+CREATE OR REPLACE PROCEDURE SP_GUI_TINNHAN_WITH_ATTACH(
+  p_mactc VARCHAR2,
+  p_matk VARCHAR2,
+  p_noidung CLOB,
+  p_securitylabel NUMBER,
+  p_attach_id NUMBER,
+  p_matn OUT NUMBER
+) AS
+BEGIN
+  INSERT INTO TINNHAN(MACTC, MATK, NOIDUNG, SECURITYLABEL, MALOAITN, MATRANGTHAI)
+  VALUES(p_mactc, p_matk, p_noidung, p_securitylabel, 'TEXT', 'ACTIVE')
+  RETURNING MATN INTO p_matn;
+  
+  INSERT INTO TINNHAN_ATTACH(MATN, ATTACH_ID) VALUES(p_matn, p_attach_id);
+  
+  COMMIT;
+END;
+/
+
+-- SP_GUI_TINNHAN_RIENG_AND_SEND: Gửi tin nhắn riêng (tự động tạo conversation nếu chưa có)
+CREATE OR REPLACE PROCEDURE SP_GUI_TINNHAN_RIENG_AND_SEND(
+  p_matk_sender VARCHAR2,
+  p_matk_receiver VARCHAR2,
+  p_noidung CLOB,
+  p_securitylabel NUMBER,
+  p_mactc OUT VARCHAR2,
+  p_matn OUT NUMBER
+) AS
+  v_count NUMBER;
+  v_mactc VARCHAR2(60);
+BEGIN
+  -- Tìm conversation riêng giữa 2 người
+  SELECT MACTC INTO v_mactc
+  FROM (
+    SELECT c.MACTC FROM CUOCTROCHUYEN c
+    WHERE c.IS_PRIVATE = 'Y'
+    AND EXISTS (SELECT 1 FROM THANHVIEN t1 WHERE t1.MACTC = c.MACTC AND t1.MATK = p_matk_sender)
+    AND EXISTS (SELECT 1 FROM THANHVIEN t2 WHERE t2.MACTC = c.MACTC AND t2.MATK = p_matk_receiver)
+    ORDER BY c.NGAYTAO DESC
+  ) WHERE ROWNUM = 1;
+  
+  p_mactc := v_mactc;
+EXCEPTION
+  WHEN NO_DATA_FOUND THEN
+    -- Tạo conversation mới
+    v_mactc := 'CTC_P_' || TO_CHAR(SYSTIMESTAMP, 'YYYYMMDDHH24MISSFF6');
+    
+    INSERT INTO CUOCTROCHUYEN(MACTC, MALOAICTC, TENCTC, NGUOIQL, IS_PRIVATE, CREATED_BY)
+    VALUES(v_mactc, 'PRIVATE', 'Private Chat', p_matk_sender, 'Y', p_matk_sender);
+    
+    INSERT INTO THANHVIEN(MACTC, MATK, QUYEN, MAPHANQUYEN)
+    VALUES(v_mactc, p_matk_sender, 'member', 'MEMBER');
+    
+    INSERT INTO THANHVIEN(MACTC, MATK, QUYEN, MAPHANQUYEN)
+    VALUES(v_mactc, p_matk_receiver, 'member', 'MEMBER');
+    
+    p_mactc := v_mactc;
+    COMMIT;
+END;
+  -- Gửi tin nhắn
+  INSERT INTO TINNHAN(MACTC, MATK, NOIDUNG, SECURITYLABEL, MALOAITN, MATRANGTHAI)
+  VALUES(p_mactc, p_matk_sender, p_noidung, p_securitylabel, 'TEXT', 'ACTIVE')
+  RETURNING MATN INTO p_matn;
+  
+  COMMIT;
+END;
+/
+
+-- SP_XEM_CHITIET_NGUOIDUNG: Xem chi tiết người dùng
+CREATE OR REPLACE PROCEDURE SP_XEM_CHITIET_NGUOIDUNG(
+  p_matk VARCHAR2,
+  p_cursor OUT SYS_REFCURSOR
+) AS
+BEGIN
+  OPEN p_cursor FOR
+    SELECT t.MATK, t.TENTK, t.CLEARANCELEVEL, t.IS_BANNED_GLOBAL, t.NGAYTAO,
+           n.HOVATEN, n.EMAIL, n.SDT, n.NGAYSINH,
+           pb.TENPB, cv.TENCV
+    FROM TAIKHOAN t
+    LEFT JOIN NGUOIDUNG n ON t.MATK = n.MATK
+    LEFT JOIN PHONGBAN pb ON n.MAPB = pb.MAPB
+    LEFT JOIN CHUCVU cv ON n.MACV = cv.MACV
+    WHERE t.MATK = p_matk;
+END;
+/
+
+-- SP_LAY_CHITIET_CUOCTROCHUYEN: Lấy chi tiết cuộc trò chuyện
+CREATE OR REPLACE PROCEDURE SP_LAY_CHITIET_CUOCTROCHUYEN(
+  p_mactc VARCHAR2,
+  p_cursor OUT SYS_REFCURSOR
+) AS
+BEGIN
+  OPEN p_cursor FOR
+    SELECT c.MACTC, c.TENCTC, c.NGAYTAO, c.IS_PRIVATE,
+           c.NGUOIQL, t_owner.TENTK AS TENTK_NGUOIQL,
+           lc.TENLOAICTC
+    FROM CUOCTROCHUYEN c
+    LEFT JOIN TAIKHOAN t_owner ON c.NGUOIQL = t_owner.MATK
+    LEFT JOIN LOAICTC lc ON c.MALOAICTC = lc.MALOAICTC
+    WHERE c.MACTC = p_mactc;
+END;
+/
+
+-- SP_LAY_THANHVIEN_CUOCTROCHUYEN_CHITIET: Lấy danh sách thành viên chi tiết
+CREATE OR REPLACE PROCEDURE SP_LAY_THANHVIEN_CUOCTROCHUYEN_CHITIET(
+  p_mactc VARCHAR2,
+  p_cursor OUT SYS_REFCURSOR
+) AS
+BEGIN
+  OPEN p_cursor FOR
+    SELECT tv.MATK, tk.TENTK, tv.QUYEN, tv.MAPHANQUYEN,
+           tv.IS_BANNED, tv.IS_MUTED, tv.NGAYTHAMGIA,
+           n.HOVATEN, n.EMAIL
+    FROM THANHVIEN tv
+    JOIN TAIKHOAN tk ON tv.MATK = tk.MATK
+    LEFT JOIN NGUOIDUNG n ON tv.MATK = n.MATK
+    WHERE tv.MACTC = p_mactc AND tv.DELETED_BY_MEMBER = 0
+    ORDER BY tv.NGAYTHAMGIA;
+END;
+/
+
+-- SP_CAPNHAT_THONGTIN_BAN: Cập nhật thông tin cá nhân
+CREATE OR REPLACE PROCEDURE SP_CAPNHAT_THONGTIN_BAN(
+  p_matk VARCHAR2,
+  p_hovaten VARCHAR2,
+  p_email VARCHAR2,
+  p_sdt VARCHAR2,
+  p_ngaysinh DATE
+) AS
+  v_count NUMBER;
+BEGIN
+  SELECT COUNT(*) INTO v_count FROM NGUOIDUNG WHERE MATK = p_matk;
+  
+  IF v_count = 0 THEN
+    INSERT INTO NGUOIDUNG(MATK, HOVATEN, EMAIL, SDT, NGAYSINH)
+    VALUES(p_matk, p_hovaten, p_email, p_sdt, p_ngaysinh);
+  ELSE
+    UPDATE NGUOIDUNG 
+    SET HOVATEN = p_hovaten, EMAIL = p_email, SDT = p_sdt, NGAYSINH = p_ngaysinh
+    WHERE MATK = p_matk;
+  END IF;
+  
+  COMMIT;
+END;
+/
+
+-- SP_XOA_TAIKHOAN_TOAN_BO: Xóa tài khoản hoàn toàn (cascade)
+CREATE OR REPLACE PROCEDURE SP_XOA_TAIKHOAN_TOAN_BO(
+  p_matk VARCHAR2
+) AS
+BEGIN
+  -- Xóa OTP
+  DELETE FROM XACTHUCOTP WHERE MATK = p_matk;
+  
+  -- Xóa attachments
+  DELETE FROM ATTACHMENT WHERE MATK = p_matk;
+  
+  -- Xóa tin nhắn
+  DELETE FROM TINNHAN WHERE MATK = p_matk;
+  
+  -- Xóa thành viên
+  DELETE FROM THANHVIEN WHERE MATK = p_matk;
+  
+  -- Xóa người dùng
+  DELETE FROM NGUOIDUNG WHERE MATK = p_matk;
+  
+  -- Xóa tài khoản
+  DELETE FROM TAIKHOAN WHERE MATK = p_matk;
+  
+  COMMIT;
+END;
+/
 
 --------------------------------------------------------------------------------
--- End of schema.sql (DDL only)
+-- End of schema.sql (Complete with all procedures)
 --------------------------------------------------------------------------------

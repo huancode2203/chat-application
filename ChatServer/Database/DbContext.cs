@@ -7,16 +7,6 @@ using ChatServer.Services;
 
 namespace ChatServer.Database
 {
-    /// <summary>
-    /// DbContext đơn giản để làm việc với Oracle dựa trên script mới (TAIKHOAN, TINNHAN, AUDIT_LOGS).
-    /// - Mở kết nối Oracle.
-    /// - Thiết lập SESSION_USER_LEVEL cho VPD/MAC (thông qua package MAC_CTX_PKG).
-    /// - Thực hiện insert/select vào bảng TINNHAN, AUDIT_LOGS, v.v.
-    ///
-    /// VPD (Virtual Private Database):
-    /// - Trên Oracle, policy VPD gắn vào bảng TINNHAN dùng SYS_CONTEXT('MAC_CTX', 'USER_LEVEL')
-    ///   để tự động thêm điều kiện WHERE cho từng user (no read up).
-    /// </summary>
     public class DbContext : IDisposable
     {
         private readonly string _connectionString;
@@ -36,11 +26,6 @@ namespace ChatServer.Database
         public OracleConnection Connection =>
             _connection ?? throw new InvalidOperationException("Connection is not opened.");
 
-        /// <summary>
-        /// Thiết lập SESSION_USER_LEVEL cho VPD/MAC.
-        /// Trên DB đã có package MAC_CTX_PKG theo script của bạn:
-        ///   MAC_CTX_PKG.SET_USER_LEVEL(p_user, p_level);
-        /// </summary>
         public async Task SetSessionUserLevelAsync(string username, int level)
         {
             using var cmd = Connection.CreateCommand();
@@ -51,16 +36,6 @@ namespace ChatServer.Database
             await cmd.ExecuteNonQueryAsync();
         }
 
-        /// <summary>
-        /// Ghi một tin nhắn vào bảng TINNHAN.
-        ///
-        /// Với schema mới, ta đơn giản lưu:
-        /// - MATK: mã tài khoản (user gửi)
-        /// - NOIDUNG: nội dung tin nhắn
-        /// - SECURITYLABEL: nhãn bảo mật
-        ///
-        /// Các cột MACTC, MALOAITN, MATRANGTHAI có thể để NULL nếu không dùng conversation phức tạp.
-        /// </summary>
         public async Task InsertMessageAsync(string senderMatk, string content, int securityLabel)
         {
             using var cmd = Connection.CreateCommand();
@@ -73,24 +48,14 @@ namespace ChatServer.Database
             await cmd.ExecuteNonQueryAsync();
         }
 
-        /// <summary>
-        /// Lấy danh sách tin nhắn của một user (theo MATK).
-        /// VPD trên TINNHAN sẽ tự động filter theo SECURITYLABEL và SESSION_USER_LEVEL.
-        /// Demo: chỉ lấy các tin mà MATK = :p_matk (user là người gửi).
-        /// Bạn có thể mở rộng thêm điều kiện MACTC để hỗ trợ cuộc trò chuyện nhóm, v.v.
-        /// </summary>
         public async Task<List<ChatMessageRecord>> GetMessagesForUserAsync(string matk)
         {
             using var cmd = Connection.CreateCommand();
             cmd.CommandText = @"
-                SELECT t.MATN,
-                       t.MATK,
-                       t.NOIDUNG,
-                       t.SECURITYLABEL,
-                       t.NGAYGUI
-                  FROM TINNHAN t
-                 WHERE t.MATK = :p_matk
-                 ORDER BY t.NGAYGUI";
+                SELECT t.MATN, t.MATK, t.NOIDUNG, t.SECURITYLABEL, t.NGAYGUI
+                FROM TINNHAN t
+                WHERE t.MATK = :p_matk
+                ORDER BY t.NGAYGUI";
             cmd.Parameters.Add(new OracleParameter("p_matk", OracleDbType.Varchar2) { Value = matk });
 
             var result = new List<ChatMessageRecord>();
@@ -109,17 +74,13 @@ namespace ChatServer.Database
             return result;
         }
 
-        /// <summary>
-        /// Lấy thông tin tài khoản (MATK, CLEARANCELEVEL) từ bảng TAIKHOAN.
-        /// MATK chính là username mà client dùng để đăng nhập.
-        /// </summary>
         public async Task<UserAccount?> GetUserAccountAsync(string matk)
         {
             using var cmd = Connection.CreateCommand();
             cmd.CommandText = @"
-                SELECT MATK, PASSWORD_HASH, CLEARANCELEVEL
-                  FROM TAIKHOAN
-                 WHERE MATK = :p_matk";
+                SELECT MATK, PASSWORD_HASH, CLEARANCELEVEL, IS_BANNED_GLOBAL
+                FROM TAIKHOAN
+                WHERE MATK = :p_matk";
             cmd.Parameters.Add(new OracleParameter("p_matk", OracleDbType.Varchar2) { Value = matk });
             using var reader = await cmd.ExecuteReaderAsync();
             if (!await reader.ReadAsync())
@@ -131,14 +92,11 @@ namespace ChatServer.Database
             {
                 Matk = reader.GetString(0),
                 PasswordHash = reader.GetString(1),
-                ClearanceLevel = reader.GetInt32(2)
+                ClearanceLevel = reader.GetInt32(2),
+                IsBannedGlobal = reader.GetInt32(3) == 1
             };
         }
 
-        /// <summary>
-        /// Ghi audit log vào bảng AUDIT_LOGS.
-        /// LOGID dùng identity nên không cần sequence.
-        /// </summary>
         public async Task WriteAuditLogAsync(string matk, string action, string target, int securityLabel)
         {
             using var cmd = Connection.CreateCommand();
@@ -152,9 +110,6 @@ namespace ChatServer.Database
             await cmd.ExecuteNonQueryAsync();
         }
 
-        /// <summary>
-        /// Tạo tài khoản mới (gọi stored procedure SP_TAO_TAIKHOAN).
-        /// </summary>
         public async Task CreateAccountAsync(string matk, string tentk, string passwordHash, string? mavaitro, int clearanceLevel)
         {
             using var cmd = Connection.CreateCommand();
@@ -168,9 +123,6 @@ namespace ChatServer.Database
             await cmd.ExecuteNonQueryAsync();
         }
 
-        /// <summary>
-        /// Tạo OTP mới trong bảng XACTHUCOTP.
-        /// </summary>
         public async Task<int> CreateOtpAsync(string matk, string email, string otpHash, int expiryMinutes = 10)
         {
             using var cmd = Connection.CreateCommand();
@@ -188,9 +140,6 @@ namespace ChatServer.Database
             return Convert.ToInt32(outParam.Value);
         }
 
-        /// <summary>
-        /// Xác minh OTP: kiểm tra OTP có đúng và chưa hết hạn, chưa được xác minh.
-        /// </summary>
         public async Task<bool> VerifyOtpAsync(string matk, string otpHash)
         {
             using var cmd = Connection.CreateCommand();
@@ -207,7 +156,6 @@ namespace ChatServer.Database
             var count = Convert.ToInt32(result);
             if (count > 0)
             {
-                // Đánh dấu OTP đã được xác minh
                 using var updateCmd = Connection.CreateCommand();
                 updateCmd.CommandText = @"
                     UPDATE XACTHUCOTP SET DAXACMINH = 1
@@ -220,9 +168,6 @@ namespace ChatServer.Database
             return false;
         }
 
-        /// <summary>
-        /// Đổi mật khẩu (gọi stored procedure SP_DOI_MATKHAU).
-        /// </summary>
         public async Task UpdatePasswordAsync(string matk, string newPasswordHash)
         {
             using var cmd = Connection.CreateCommand();
@@ -233,9 +178,6 @@ namespace ChatServer.Database
             await cmd.ExecuteNonQueryAsync();
         }
 
-        /// <summary>
-        /// Lấy email từ bảng NGUOIDUNG hoặc từ tham số khi tạo OTP.
-        /// </summary>
         public async Task<string?> GetEmailByMatkAsync(string matk)
         {
             using var cmd = Connection.CreateCommand();
@@ -246,9 +188,6 @@ namespace ChatServer.Database
             return result.ToString();
         }
 
-        /// <summary>
-        /// Kiểm tra tài khoản đã tồn tại chưa.
-        /// </summary>
         public async Task<bool> AccountExistsAsync(string matk)
         {
             using var cmd = Connection.CreateCommand();
@@ -257,6 +196,198 @@ namespace ChatServer.Database
             var result = await cmd.ExecuteScalarAsync();
             if (result == null || result == DBNull.Value) return false;
             return Convert.ToInt32(result) > 0;
+        }
+
+        // === CONVERSATION MANAGEMENT ===
+        public async Task<string> CreateConversationAsync(string mactc, string maloaictc, string tenctc,
+            string nguoiql, string isPrivate, string createdBy)
+        {
+            using var cmd = Connection.CreateCommand();
+            cmd.CommandText = "BEGIN SP_TAO_CUOCTROCHUYEN(:p_mactc, :p_maloaictc, :p_tenctc, :p_nguoiql, :p_is_private, :p_created_by); END;";
+            cmd.CommandType = CommandType.Text;
+            cmd.Parameters.Add(new OracleParameter("p_mactc", OracleDbType.Varchar2) { Value = mactc });
+            cmd.Parameters.Add(new OracleParameter("p_maloaictc", OracleDbType.Varchar2) { Value = maloaictc });
+            cmd.Parameters.Add(new OracleParameter("p_tenctc", OracleDbType.Varchar2) { Value = tenctc });
+            cmd.Parameters.Add(new OracleParameter("p_nguoiql", OracleDbType.Varchar2) { Value = nguoiql });
+            cmd.Parameters.Add(new OracleParameter("p_is_private", OracleDbType.Varchar2) { Value = isPrivate });
+            cmd.Parameters.Add(new OracleParameter("p_created_by", OracleDbType.Varchar2) { Value = createdBy });
+            await cmd.ExecuteNonQueryAsync();
+            return mactc;
+        }
+
+        public async Task AddMemberAsync(string mactc, string matk, string quyen = "member", string maphanquyen = "MEMBER")
+        {
+            using var cmd = Connection.CreateCommand();
+            cmd.CommandText = "BEGIN SP_THEM_THANHVIEN(:p_mactc, :p_matk, :p_quyen, :p_maphanquyen); END;";
+            cmd.CommandType = CommandType.Text;
+            cmd.Parameters.Add(new OracleParameter("p_mactc", OracleDbType.Varchar2) { Value = mactc });
+            cmd.Parameters.Add(new OracleParameter("p_matk", OracleDbType.Varchar2) { Value = matk });
+            cmd.Parameters.Add(new OracleParameter("p_quyen", OracleDbType.Varchar2) { Value = quyen });
+            cmd.Parameters.Add(new OracleParameter("p_maphanquyen", OracleDbType.Varchar2) { Value = maphanquyen });
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+        public async Task RemoveMemberAsync(string mactc, string matk)
+        {
+            using var cmd = Connection.CreateCommand();
+            cmd.CommandText = "BEGIN SP_XOA_THANHVIEN(:p_mactc, :p_matk); END;";
+            cmd.CommandType = CommandType.Text;
+            cmd.Parameters.Add(new OracleParameter("p_mactc", OracleDbType.Varchar2) { Value = mactc });
+            cmd.Parameters.Add(new OracleParameter("p_matk", OracleDbType.Varchar2) { Value = matk });
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+        public async Task DeleteConversationAsync(string mactc)
+        {
+            using var cmd = Connection.CreateCommand();
+            cmd.CommandText = "BEGIN SP_XOA_CUOCTROCHUYEN(:p_mactc); END;";
+            cmd.CommandType = CommandType.Text;
+            cmd.Parameters.Add(new OracleParameter("p_mactc", OracleDbType.Varchar2) { Value = mactc });
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+        public async Task<List<ConversationInfo>> GetUserConversationsAsync(string matk)
+        {
+            using var cmd = Connection.CreateCommand();
+            cmd.CommandText = @"
+                SELECT DISTINCT c.MACTC, c.TENCTC, c.IS_PRIVATE, c.NGAYTAO, 
+                       (SELECT COUNT(*) FROM THANHVIEN tv WHERE tv.MACTC = c.MACTC) AS MEMBER_COUNT
+                FROM CUOCTROCHUYEN c
+                JOIN THANHVIEN tv ON c.MACTC = tv.MACTC
+                WHERE tv.MATK = :p_matk AND tv.DELETED_BY_MEMBER = 0
+                ORDER BY c.NGAYTAO DESC";
+            cmd.Parameters.Add(new OracleParameter("p_matk", OracleDbType.Varchar2) { Value = matk });
+
+            var result = new List<ConversationInfo>();
+            using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                result.Add(new ConversationInfo
+                {
+                    Mactc = reader.GetString(0),
+                    Tenctc = reader.GetString(1),
+                    IsPrivate = reader.GetString(2) == "Y",
+                    NgayTao = reader.GetDateTime(3),
+                    MemberCount = reader.GetInt32(4)
+                });
+            }
+            return result;
+        }
+
+        public async Task<List<ChatMessageRecord>> GetConversationMessagesAsync(string mactc, int limit = 100)
+        {
+            using var cmd = Connection.CreateCommand();
+            cmd.CommandText = @"
+                SELECT * FROM (
+                    SELECT t.MATN, t.MATK, t.NOIDUNG, t.SECURITYLABEL, t.NGAYGUI
+                    FROM TINNHAN t
+                    WHERE t.MACTC = :p_mactc
+                    ORDER BY t.NGAYGUI DESC
+                ) WHERE ROWNUM <= :p_limit
+                ORDER BY NGAYGUI ASC";
+            cmd.Parameters.Add(new OracleParameter("p_mactc", OracleDbType.Varchar2) { Value = mactc });
+            cmd.Parameters.Add(new OracleParameter("p_limit", OracleDbType.Int32) { Value = limit });
+
+            var result = new List<ChatMessageRecord>();
+            using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                result.Add(new ChatMessageRecord
+                {
+                    MessageId = reader.GetInt32(0),
+                    SenderMatk = reader.GetString(1),
+                    Content = reader.GetString(2),
+                    SecurityLabel = reader.GetInt32(3),
+                    Timestamp = reader.GetDateTime(4)
+                });
+            }
+            return result;
+        }
+
+        public async Task<int> SendMessageToConversationAsync(string mactc, string matk, string content, int securityLabel)
+        {
+            using var cmd = Connection.CreateCommand();
+            cmd.CommandText = "BEGIN SP_GUI_TINNHAN(:p_mactc, :p_matk, :p_noidung, :p_securitylabel, :p_matn); END;";
+            cmd.CommandType = CommandType.Text;
+            cmd.Parameters.Add(new OracleParameter("p_mactc", OracleDbType.Varchar2) { Value = mactc });
+            cmd.Parameters.Add(new OracleParameter("p_matk", OracleDbType.Varchar2) { Value = matk });
+            cmd.Parameters.Add(new OracleParameter("p_noidung", OracleDbType.Clob) { Value = content });
+            cmd.Parameters.Add(new OracleParameter("p_securitylabel", OracleDbType.Int32) { Value = securityLabel });
+            var outParam = new OracleParameter("p_matn", OracleDbType.Int32) { Direction = ParameterDirection.Output };
+            cmd.Parameters.Add(outParam);
+            await cmd.ExecuteNonQueryAsync();
+            return Convert.ToInt32(outParam.Value);
+        }
+
+        public async Task<MemberPermission?> GetMemberPermissionAsync(string mactc, string matk)
+        {
+            using var cmd = Connection.CreateCommand();
+            cmd.CommandText = @"
+                SELECT tv.QUYEN, tv.MAPHANQUYEN, tv.IS_BANNED, tv.IS_MUTED,
+                       pq.CAN_ADD, pq.CAN_REMOVE, pq.CAN_DELETE, pq.CAN_BAN, pq.CAN_MUTE
+                FROM THANHVIEN tv
+                LEFT JOIN PHAN_QUYEN_NHOM pq ON tv.MAPHANQUYEN = pq.MAPHANQUYEN
+                WHERE tv.MACTC = :p_mactc AND tv.MATK = :p_matk";
+            cmd.Parameters.Add(new OracleParameter("p_mactc", OracleDbType.Varchar2) { Value = mactc });
+            cmd.Parameters.Add(new OracleParameter("p_matk", OracleDbType.Varchar2) { Value = matk });
+
+            using var reader = await cmd.ExecuteReaderAsync();
+            if (!await reader.ReadAsync())
+            {
+                return null;
+            }
+
+            return new MemberPermission
+            {
+                Quyen = reader.GetString(0),
+                IsBanned = reader.GetInt32(2) == 1,
+                IsMuted = reader.GetInt32(3) == 1,
+                CanAdd = reader.IsDBNull(4) ? false : reader.GetInt32(4) == 1,
+                CanRemove = reader.IsDBNull(5) ? false : reader.GetInt32(5) == 1,
+                CanDelete = reader.IsDBNull(6) ? false : reader.GetInt32(6) == 1,
+                CanBan = reader.IsDBNull(7) ? false : reader.GetInt32(7) == 1,
+                CanMute = reader.IsDBNull(8) ? false : reader.GetInt32(8) == 1
+            };
+        }
+
+        public async Task BanMemberAsync(string mactc, string matk)
+        {
+            using var cmd = Connection.CreateCommand();
+            cmd.CommandText = "BEGIN SP_BAN_MEMBER(:p_mactc, :p_matk); END;";
+            cmd.CommandType = CommandType.Text;
+            cmd.Parameters.Add(new OracleParameter("p_mactc", OracleDbType.Varchar2) { Value = mactc });
+            cmd.Parameters.Add(new OracleParameter("p_matk", OracleDbType.Varchar2) { Value = matk });
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+        public async Task UnbanMemberAsync(string mactc, string matk)
+        {
+            using var cmd = Connection.CreateCommand();
+            cmd.CommandText = "BEGIN SP_UNBAN_MEMBER(:p_mactc, :p_matk); END;";
+            cmd.CommandType = CommandType.Text;
+            cmd.Parameters.Add(new OracleParameter("p_mactc", OracleDbType.Varchar2) { Value = mactc });
+            cmd.Parameters.Add(new OracleParameter("p_matk", OracleDbType.Varchar2) { Value = matk });
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+        public async Task MuteMemberAsync(string mactc, string matk)
+        {
+            using var cmd = Connection.CreateCommand();
+            cmd.CommandText = "BEGIN SP_MUTE_MEMBER(:p_mactc, :p_matk); END;";
+            cmd.CommandType = CommandType.Text;
+            cmd.Parameters.Add(new OracleParameter("p_mactc", OracleDbType.Varchar2) { Value = mactc });
+            cmd.Parameters.Add(new OracleParameter("p_matk", OracleDbType.Varchar2) { Value = matk });
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+        public async Task UnmuteMemberAsync(string mactc, string matk)
+        {
+            using var cmd = Connection.CreateCommand();
+            cmd.CommandText = "BEGIN SP_UNMUTE_MEMBER(:p_mactc, :p_matk); END;";
+            cmd.CommandType = CommandType.Text;
+            cmd.Parameters.Add(new OracleParameter("p_mactc", OracleDbType.Varchar2) { Value = mactc });
+            cmd.Parameters.Add(new OracleParameter("p_matk", OracleDbType.Varchar2) { Value = matk });
+            await cmd.ExecuteNonQueryAsync();
         }
 
         public void Dispose()
@@ -274,15 +405,32 @@ namespace ChatServer.Database
         public DateTime Timestamp { get; set; }
     }
 
-    /// <summary>
-    /// Thông tin tài khoản đọc từ bảng TAIKHOAN.
-    /// </summary>
     public class UserAccount
     {
         public string Matk { get; set; } = string.Empty;
         public string PasswordHash { get; set; } = string.Empty;
         public int ClearanceLevel { get; set; }
+        public bool IsBannedGlobal { get; set; }
+    }
+
+    public class ConversationInfo
+    {
+        public string Mactc { get; set; } = string.Empty;
+        public string Tenctc { get; set; } = string.Empty;
+        public bool IsPrivate { get; set; }
+        public DateTime NgayTao { get; set; }
+        public int MemberCount { get; set; }
+    }
+
+    public class MemberPermission
+    {
+        public string Quyen { get; set; } = string.Empty;
+        public bool IsBanned { get; set; }
+        public bool IsMuted { get; set; }
+        public bool CanAdd { get; set; }
+        public bool CanRemove { get; set; }
+        public bool CanDelete { get; set; }
+        public bool CanBan { get; set; }
+        public bool CanMute { get; set; }
     }
 }
-
-
