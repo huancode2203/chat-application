@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using ChatClient.Models;
 using ChatClient.Services;
+using Timer = System.Windows.Forms.Timer;
 
 namespace ChatClient.Forms
 {
@@ -97,14 +98,14 @@ namespace ChatClient.Forms
                 lstConversations.Items.Clear();
                 foreach (var conv in response.Conversations)
                 {
-                    var item = new ListViewItem(conv.Name);
+                    var item = new ListViewItem(conv.ConversationName);
                     item.SubItems.Add(conv.MemberCount.ToString());
                     item.SubItems.Add(conv.IsPrivate ? "Riêng tư" : "Nhóm");
-                    item.Tag = conv.Id;
+                    item.Tag = conv.ConversationId;
                     lstConversations.Items.Add(item);
                 }
 
-                UpdateStatus($"Đã tải {response.Conversations.Count} cuộc trò chuyện.", false);
+                UpdateStatus($"Đã tải {response.Conversations.Length} cuộc trò chuyện.", false);
             }
             catch (Exception ex)
             {
@@ -189,17 +190,11 @@ namespace ChatClient.Forms
                 lstMessages.Items.Clear();
                 foreach (var msg in response.Messages.OrderBy(m => m.Timestamp))
                 {
-                    var line = new StringBuilder();
-                    line.Append($"[{msg.Timestamp:HH:mm:ss}] ");
-                    line.Append($"{msg.Sender}");
-                    line.Append($" (Label={msg.SecurityLabel}): ");
-                    line.Append(msg.Content);
-
                     var item = new ListViewItem(msg.Timestamp.ToString("HH:mm:ss"));
                     item.SubItems.Add(msg.Sender);
                     item.SubItems.Add(msg.Content);
                     item.SubItems.Add(msg.SecurityLabel.ToString());
-                    item.Tag = msg.Id;
+                    item.Tag = msg.MessageId;
                     lstMessages.Items.Add(item);
                 }
 
@@ -223,7 +218,7 @@ namespace ChatClient.Forms
             try
             {
                 var response = await _socketClient.CreateGroupAsync(
-                    _currentUser, dialog.GroupName, dialog.GroupType, dialog.Members);
+                    _currentUser, dialog.GroupName, dialog.GroupType, dialog.Members.ToArray());
 
                 if (response == null || !response.Success)
                 {

@@ -25,3 +25,4 @@ C:\Users\Lenovo\Desktop\ChatApplication\ChatServer\bin\Debug\net6.0\Microsoft.Ex
 C:\Users\Lenovo\Desktop\ChatApplication\ChatServer\bin\Debug\net6.0\Microsoft.Extensions.FileProviders.Physical.dll
 C:\Users\Lenovo\Desktop\ChatApplication\ChatServer\bin\Debug\net6.0\Microsoft.Extensions.FileSystemGlobbing.dll
 C:\Users\Lenovo\Desktop\ChatApplication\ChatServer\bin\Debug\net6.0\Microsoft.Extensions.Primitives.dll
+C:\Users\Lenovo\Desktop\ChatApplication\ChatServer\obj\Debug\net6.0\ChatServer.sourcelink.json

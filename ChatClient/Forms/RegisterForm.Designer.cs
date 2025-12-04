@@ -135,8 +135,7 @@ namespace ChatClient.Forms
             this.cbClearance.FormattingEnabled = true;
             this.cbClearance.Items.AddRange(new object[] {
             "1 - LOW",
-            "2 - MEDIUM",
-            "3 - HIGH"});
+            "2 - MEDIUM"});
             this.cbClearance.Location = new System.Drawing.Point(150, 217);
             this.cbClearance.Name = "cbClearance";
             this.cbClearance.Size = new System.Drawing.Size(250, 23);

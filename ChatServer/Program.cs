@@ -1,8 +1,12 @@
 using System;
 using System.IO;
+using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 using ChatServer.Database;
+using ChatServer.Forms;
 using ChatServer.Services;
 using Microsoft.Extensions.Configuration;
 
@@ -10,6 +14,9 @@ namespace ChatServer
 {
     internal class Program
     {
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool AllocConsole();
         /// <summary>
         /// Điểm vào của server console.
         /// Server sẽ:
@@ -18,8 +25,15 @@ namespace ChatServer
         /// - Tạo MACService + ChatProcessingService.
         /// - Khởi động SocketServerService lắng nghe TCP.
         /// </summary>
+        [STAThread]
         private static async Task Main(string[] args)
         {
+            // Allocate console window for WinExe
+            if (args.Length == 0 || !args.Contains("--no-console"))
+            {
+                AllocConsole();
+            }
+
             // Đọc cấu hình từ appsettings.json
             var configuration = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
@@ -36,6 +50,7 @@ namespace ChatServer
             var emailPassword = configuration["EmailSettings:SmtpPassword"] ?? "";
             var fromEmail = configuration["EmailSettings:FromEmail"] ?? "";
             var fromName = configuration["EmailSettings:FromName"] ?? "Chat Application";
+            var verificationBaseUrl = configuration["EmailSettings:VerificationBaseUrl"] ?? "chatapp://verify";
 
             Console.WriteLine("=== Chat Server Starting ===");
             Console.WriteLine($"Database: {connectionString.Split(';')[0]}");
@@ -60,7 +75,8 @@ namespace ChatServer
                 smtpUsername: emailUsername,
                 smtpPassword: emailPassword,
                 fromEmail: fromEmail,
-                fromName: fromName
+                fromName: fromName,
+                verificationBaseUrl: verificationBaseUrl
             );
             var chatProcessing = new ChatProcessingService(dbContext, macService, emailService);
             var socketServer = new SocketServerService(chatProcessing, port: serverPort);
@@ -73,7 +89,65 @@ namespace ChatServer
             };
 
             Console.WriteLine("Starting chat server. Press Ctrl+C to stop.");
-            await socketServer.StartAsync(cts.Token);
+            Console.WriteLine("Type 'admin' to open admin panel.");
+
+            // Start server in background
+            var serverTask = socketServer.StartAsync(cts.Token);
+
+            // Initialize WinForms for admin panel
+            Application.SetHighDpiMode(HighDpiMode.SystemAware);
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+
+            // Create a hidden form to maintain UI thread context
+            var hiddenForm = new Form { WindowState = FormWindowState.Minimized, ShowInTaskbar = false };
+            hiddenForm.Load += (_, _) => hiddenForm.Hide();
+
+            // Check for admin command
+            var adminFormRef = (AdminPanelForm?)null;
+            _ = Task.Run(() =>
+            {
+                while (!cts.Token.IsCancellationRequested)
+                {
+                    var input = Console.ReadLine();
+                    if (input?.Trim().ToLower() == "admin")
+                    {
+                        // Open admin panel directly without login
+                        if (hiddenForm.InvokeRequired)
+                        {
+                            hiddenForm.Invoke(new Action(() =>
+                            {
+                                if (adminFormRef == null || adminFormRef.IsDisposed)
+                                {
+                                    adminFormRef = new AdminPanelForm(dbContext, "SYSTEM", 3);
+                                    adminFormRef.Show();
+                                }
+                                else
+                                {
+                                    adminFormRef.BringToFront();
+                                }
+                            }));
+                        }
+                        else
+                        {
+                            if (adminFormRef == null || adminFormRef.IsDisposed)
+                            {
+                                adminFormRef = new AdminPanelForm(dbContext, "SYSTEM", 3);
+                                adminFormRef.Show();
+                            }
+                            else
+                            {
+                                adminFormRef.BringToFront();
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Run message loop for WinForms
+            var formsTask = Task.Run(() => Application.Run(hiddenForm));
+
+            await Task.WhenAny(serverTask, formsTask);
 
             Console.WriteLine("Chat server stopped.");
         }

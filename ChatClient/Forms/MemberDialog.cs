@@ -73,7 +73,7 @@ namespace ChatClient.Forms
                     lstMembers.Items.Add(item);
                 }
 
-                lblStatus.Text = $"Đã tải {response.Members.Count} thành viên.";
+                lblStatus.Text = $"Đã tải {response.Members.Length} thành viên.";
                 lblStatus.ForeColor = System.Drawing.Color.Green;
             }
             catch (Exception ex)

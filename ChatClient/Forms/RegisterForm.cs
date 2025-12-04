@@ -24,6 +24,12 @@ namespace ChatClient.Forms
             btnRegister.Click += async (_, _) => await BtnRegister_Click();
             btnCancel.Click += (_, _) => Close();
             cbClearance.SelectedIndex = 0;
+            
+            // Chỉ cho phép chọn level 1 và 2 (không cho đăng ký level 3)
+            cbClearance.Items.Clear();
+            cbClearance.Items.Add("1 - LOW");
+            cbClearance.Items.Add("2 - MEDIUM");
+            cbClearance.SelectedIndex = 0;
         }
 
         private async Task BtnRegister_Click()
@@ -50,6 +56,13 @@ namespace ChatClient.Forms
             if (!email.Contains("@"))
             {
                 lblStatus.Text = "Email không hợp lệ.";
+                return;
+            }
+
+            // Bảo mật: Không cho phép đăng ký với clearance level >= 3
+            if (clearanceLevel >= 3)
+            {
+                lblStatus.Text = "Không thể đăng ký với mức độ bảo mật cao (Level 3). Chỉ admin mới có thể cấp level 3.";
                 return;
             }
 

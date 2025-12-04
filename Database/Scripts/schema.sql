@@ -1,18 +1,39 @@
 --------------------------------------------------------------------------------
--- schema.sql
--- To run: connect CHATNOIBO_DOAN1 and execute this file.
--- This file contains ONLY DDL (CREATE USER optional, CREATE TABLE, INDEX,
--- PACKAGE, TRIGGER, PROCEDURE). No INSERT statements here.
+-- schema.sql - PHIÊN BẢN ĐÃ SỬA LỖI
+-- Để chạy: Kết nối với SYS/SYSTEM trước, sau đó kết nối với ChatApplication
+-- 
+-- HƯỚNG DẪN THỰC THI:
+-- 1. Kết nối với SYS/SYSTEM để tạo user và cấp quyền
+-- 2. Kết nối với ChatApplication để tạo bảng và đối tượng
+-- 3. Kết nối với SYS để tạo context (yêu cầu quyền SYSDBA)
+-- 4. Kết nối với ChatApplication để tạo VPD policy và FGA
 --------------------------------------------------------------------------------
 
--- 0) (Optional) CREATE USER - run as DBA if needed
-CREATE USER CHATNOIBO_DOAN1 IDENTIFIED BY "ChangeMe123!";
+--------------------------------------------------------------------------------
+-- PHẦN 1: CHẠY VỚI SYS hoặc SYSTEM (SYSDBA)
+--------------------------------------------------------------------------------
+-- ALTER SESSION SET CONTAINER = ORCLPDB; -- Bỏ comment nếu dùng PDB
+
+-- Tạo user và cấp quyền
+CREATE USER ChatApplication IDENTIFIED BY 123;
+
 GRANT CREATE SESSION, CREATE TABLE, CREATE SEQUENCE, CREATE PROCEDURE,
       CREATE VIEW, CREATE TRIGGER, CREATE TYPE, UNLIMITED TABLESPACE
-      TO CHATNOIBO_DOAN1;
-ALTER USER CHATNOIBO_DOAN1 QUOTA UNLIMITED ON USERS;
+      TO ChatApplication;
 
--- 1) Tables
+-- Cấp quyền bổ sung cho VPD và FGA
+GRANT EXECUTE ON DBMS_RLS TO ChatApplication;
+GRANT EXECUTE ON DBMS_FGA TO ChatApplication;
+GRANT EXECUTE ON DBMS_SESSION TO ChatApplication;
+
+ALTER USER ChatApplication QUOTA UNLIMITED ON USERS;
+
+--------------------------------------------------------------------------------
+-- PHẦN 2: CHẠY VỚI ChatApplication
+--------------------------------------------------------------------------------
+-- Kết nối với ChatApplication trước khi chạy phần này
+
+-- 1) Các bảng
 
 CREATE TABLE TAIKHOAN (
   MATK            VARCHAR2(20) PRIMARY KEY,
@@ -29,6 +50,10 @@ CREATE TABLE VAITRO (
   TENVAITRO VARCHAR2(100),
   CHUCNANG  VARCHAR2(200)
 );
+
+-- Thêm ràng buộc khóa ngoại sau khi VAITRO đã được tạo
+ALTER TABLE TAIKHOAN
+  ADD CONSTRAINT FK_TAIKHOAN_VAITRO FOREIGN KEY(MAVAITRO) REFERENCES VAITRO(MAVAITRO);
 
 CREATE TABLE PHONGBAN (
   MAPB  VARCHAR2(20) PRIMARY KEY,
@@ -49,7 +74,7 @@ CREATE TABLE NGUOIDUNG (
   SDT     VARCHAR2(20),
   NGAYSINH DATE,
   CONSTRAINT PK_NGUOIDUNG PRIMARY KEY(MATK),
-  CONSTRAINT FK_NGUOIDUNG_TAIKHOAN FOREIGN KEY(MATK) REFERENCES TAIKHOAN(MATK),
+  CONSTRAINT FK_NGUOIDUNG_TAIKHOAN FOREIGN KEY(MATK) REFERENCES TAIKHOAN(MATK) ON DELETE CASCADE,
   CONSTRAINT FK_NGUOIDUNG_PHONGBAN FOREIGN KEY(MAPB) REFERENCES PHONGBAN(MAPB),
   CONSTRAINT FK_NGUOIDUNG_CHUCVU FOREIGN KEY(MACV) REFERENCES CHUCVU(MACV)
 );
@@ -73,20 +98,6 @@ CREATE TABLE CUOCTROCHUYEN (
   CONSTRAINT FK_NGUOIQL_TAIKHOAN FOREIGN KEY(NGUOIQL) REFERENCES TAIKHOAN(MATK)
 );
 
-CREATE TABLE THANHVIEN (
-  MACTC       VARCHAR2(60),
-  MATK        VARCHAR2(20),
-  NGAYTHAMGIA TIMESTAMP DEFAULT SYSTIMESTAMP,
-  QUYEN       VARCHAR2(100),
-  MAPHANQUYEN VARCHAR2(20),
-  IS_BANNED   NUMBER(1) DEFAULT 0,
-  IS_MUTED    NUMBER(1) DEFAULT 0,
-  DELETED_BY_MEMBER NUMBER(1) DEFAULT 0,
-  CONSTRAINT PK_THANHVIEN PRIMARY KEY(MACTC, MATK),
-  CONSTRAINT FK_THANHVIEN_CUOCTROCHUYEN FOREIGN KEY(MACTC) REFERENCES CUOCTROCHUYEN(MACTC),
-  CONSTRAINT FK_THANHVIEN_TAIKHOAN FOREIGN KEY(MATK) REFERENCES TAIKHOAN(MATK)
-);
-
 CREATE TABLE PHAN_QUYEN_NHOM (
   MAPHANQUYEN VARCHAR2(20) PRIMARY KEY,
   TENQUYEN    VARCHAR2(100),
@@ -100,8 +111,20 @@ CREATE TABLE PHAN_QUYEN_NHOM (
   CAN_UNMUTE  NUMBER(1) DEFAULT 0
 );
 
-ALTER TABLE THANHVIEN
-  ADD CONSTRAINT FK_THANHVIEN_PHANQUYEN FOREIGN KEY(MAPHANQUYEN) REFERENCES PHAN_QUYEN_NHOM(MAPHANQUYEN);
+CREATE TABLE THANHVIEN (
+  MACTC       VARCHAR2(60),
+  MATK        VARCHAR2(20),
+  NGAYTHAMGIA TIMESTAMP DEFAULT SYSTIMESTAMP,
+  QUYEN       VARCHAR2(100),
+  MAPHANQUYEN VARCHAR2(20),
+  IS_BANNED   NUMBER(1) DEFAULT 0,
+  IS_MUTED    NUMBER(1) DEFAULT 0,
+  DELETED_BY_MEMBER NUMBER(1) DEFAULT 0,
+  CONSTRAINT PK_THANHVIEN PRIMARY KEY(MACTC, MATK),
+  CONSTRAINT FK_THANHVIEN_CUOCTROCHUYEN FOREIGN KEY(MACTC) REFERENCES CUOCTROCHUYEN(MACTC) ON DELETE CASCADE,
+  CONSTRAINT FK_THANHVIEN_TAIKHOAN FOREIGN KEY(MATK) REFERENCES TAIKHOAN(MATK) ON DELETE CASCADE,
+  CONSTRAINT FK_THANHVIEN_PHANQUYEN FOREIGN KEY(MAPHANQUYEN) REFERENCES PHAN_QUYEN_NHOM(MAPHANQUYEN)
+);
 
 CREATE TABLE LOAITN (
   MALOAITN VARCHAR2(20) PRIMARY KEY,
@@ -122,7 +145,7 @@ CREATE TABLE TINNHAN (
   NOIDUNG       CLOB,
   NGAYGUI       TIMESTAMP DEFAULT SYSTIMESTAMP,
   SECURITYLABEL NUMBER DEFAULT 1 NOT NULL,
-  CONSTRAINT FK_TINNHAN_CUOCTROCHUYEN FOREIGN KEY(MACTC) REFERENCES CUOCTROCHUYEN(MACTC),
+  CONSTRAINT FK_TINNHAN_CUOCTROCHUYEN FOREIGN KEY(MACTC) REFERENCES CUOCTROCHUYEN(MACTC) ON DELETE CASCADE,
   CONSTRAINT FK_TINNHAN_TAIKHOAN FOREIGN KEY(MATK) REFERENCES TAIKHOAN(MATK),
   CONSTRAINT FK_TINNHAN_LOAITN FOREIGN KEY(MALOAITN) REFERENCES LOAITN(MALOAITN),
   CONSTRAINT FK_TINNHAN_TRANGTHAI FOREIGN KEY(MATRANGTHAI) REFERENCES TRANGTHAI(MATRANGTHAI)
@@ -141,7 +164,7 @@ CREATE TABLE ATTACHMENT (
   FILEDATA    BLOB,
   STORAGE_URL VARCHAR2(400),
   UPLOADED_AT TIMESTAMP DEFAULT SYSTIMESTAMP,
-  CONSTRAINT FK_ATTACH_TAIKHOAN FOREIGN KEY(MATK) REFERENCES TAIKHOAN(MATK)
+  CONSTRAINT FK_ATTACH_TAIKHOAN FOREIGN KEY(MATK) REFERENCES TAIKHOAN(MATK) ON DELETE CASCADE
 );
 
 CREATE TABLE TINNHAN_ATTACH (
@@ -160,7 +183,7 @@ CREATE TABLE XACTHUCOTP (
   THOIGIANTAO    TIMESTAMP DEFAULT SYSTIMESTAMP,
   THOIGIANTONTAI TIMESTAMP,
   DAXACMINH      NUMBER(1) DEFAULT 0,
-  CONSTRAINT FK_XACTHUCOTP_TAIKHOAN FOREIGN KEY(MATK) REFERENCES TAIKHOAN(MATK)
+  CONSTRAINT FK_XACTHUCOTP_TAIKHOAN FOREIGN KEY(MATK) REFERENCES TAIKHOAN(MATK) ON DELETE CASCADE
 );
 
 CREATE TABLE AUDIT_LOGS (
@@ -172,7 +195,7 @@ CREATE TABLE AUDIT_LOGS (
   TS            TIMESTAMP(6) DEFAULT SYSTIMESTAMP
 );
 
--- 2) MAC_CTX package and context (VPD)
+-- 2) Package MAC_CTX (Chạy với ChatApplication)
 CREATE OR REPLACE PACKAGE MAC_CTX_PKG AS
   PROCEDURE SET_USER_LEVEL(p_user IN VARCHAR2, p_level IN NUMBER);
   PROCEDURE CLEAR_CONTEXT;
@@ -185,55 +208,59 @@ CREATE OR REPLACE PACKAGE BODY MAC_CTX_PKG AS
     DBMS_SESSION.SET_CONTEXT('MAC_CTX', 'USERNAME', p_user);
     DBMS_SESSION.SET_CONTEXT('MAC_CTX', 'USER_LEVEL', TO_CHAR(p_level));
   END;
+  
   PROCEDURE CLEAR_CONTEXT IS
   BEGIN
-    DBMS_SESSION.SET_CONTEXT('MAC_CTX', 'USERNAME', NULL);
-    DBMS_SESSION.SET_CONTEXT('MAC_CTX', 'USER_LEVEL', NULL);
+    DBMS_SESSION.CLEAR_CONTEXT('MAC_CTX');
   END;
 END MAC_CTX_PKG;
 /
 
-BEGIN
-  DBMS_SESSION.CREATE_CONTEXT(
-    namespace       => 'MAC_CTX',
-    attribute       => 'USERNAME',
-    trusted_package => 'CHATNOIBO_DOAN1.MAC_CTX_PKG'
-  );
-  DBMS_SESSION.CREATE_CONTEXT(
-    namespace       => 'MAC_CTX',
-    attribute       => 'USER_LEVEL',
-    trusted_package => 'CHATNOIBO_DOAN1.MAC_CTX_PKG'
-  );
-END;
-/
+--------------------------------------------------------------------------------
+-- PHẦN 3: CHẠY VỚI SYS (SYSDBA) - Tạo context
+--------------------------------------------------------------------------------
+-- Kết nối với SYS trước khi chạy phần này
+-- Context phải được tạo bởi SYS vì yêu cầu quyền SYSDBA
+-- Sử dụng câu lệnh DDL CREATE CONTEXT (không phải DBMS_SESSION.CREATE_CONTEXT)
 
--- 3) VPD function & policy
+CREATE CONTEXT MAC_CTX USING ChatApplication.MAC_CTX_PKG;
+
+-- Cấp quyền truy cập context cho ChatApplication
+GRANT EXECUTE ON DBMS_SESSION TO ChatApplication;
+
+--------------------------------------------------------------------------------
+-- PHẦN 4: CHẠY VỚI ChatApplication - VPD và FGA policies
+--------------------------------------------------------------------------------
+-- Kết nối với ChatApplication trước khi chạy phần này
+
+-- 3) Hàm VPD & policy
 CREATE OR REPLACE FUNCTION TINNHAN_POLICY_FN(
   schema_name IN VARCHAR2,
   table_name  IN VARCHAR2
 ) RETURN VARCHAR2 AS
   v_user_level NUMBER;
 BEGIN
-  v_user_level := TO_NUMBER(NVL(SYS_CONTEXT('MAC_CTX', 'USER_LEVEL'), '0'));
+  v_user_level := TO_NUMBER(NVL(SYS_CONTEXT('MAC_CTX', 'USER_LEVEL'), '1'));
   RETURN 'SECURITYLABEL <= ' || v_user_level;
 END;
 /
+
 BEGIN
   DBMS_RLS.ADD_POLICY(
-    object_schema   => USER,
+    object_schema   => 'ChatApplication',
     object_name     => 'TINNHAN',
     policy_name     => 'TINNHAN_MAC_POLICY',
-    function_schema => USER,
+    function_schema => 'ChatApplication',
     policy_function => 'TINNHAN_POLICY_FN',
     statement_types => 'SELECT'
   );
 END;
 /
 
--- 4) FGA policy to audit select
+-- 4) FGA policy để audit select
 BEGIN
   DBMS_FGA.ADD_POLICY(
-    object_schema   => USER,
+    object_schema   => 'ChatApplication',
     object_name     => 'TINNHAN',
     policy_name     => 'FGA_TINNHAN_SELECT_AUDIT',
     audit_condition => NULL,
@@ -244,16 +271,16 @@ BEGIN
 END;
 /
 
--- 5) Triggers: write-down prevention & audit for messages
-CREATE OR REPLACE TRIGGER TRG_TINNHAN_CHECK_WRITE_DOWN
+-- 5) Triggers: ngăn chặn write-up & audit cho tin nhắn
+CREATE OR REPLACE TRIGGER TRG_TINNHAN_CHECK_WRITE_UP
 BEFORE INSERT OR UPDATE ON TINNHAN
 FOR EACH ROW
 DECLARE
   v_user_level NUMBER;
 BEGIN
-  v_user_level := TO_NUMBER(NVL(SYS_CONTEXT('MAC_CTX','USER_LEVEL'), '0'));
-  IF :NEW.SECURITYLABEL < v_user_level THEN
-    RAISE_APPLICATION_ERROR(-20001, 'Write denied: cannot write down to lower security label.');
+  v_user_level := TO_NUMBER(NVL(SYS_CONTEXT('MAC_CTX','USER_LEVEL'), '1'));
+  IF :NEW.SECURITYLABEL > v_user_level THEN
+    RAISE_APPLICATION_ERROR(-20001, 'Từ chối ghi: không thể ghi lên nhãn bảo mật cao hơn.');
   END IF;
 END;
 /
@@ -263,22 +290,31 @@ AFTER INSERT OR UPDATE OR DELETE ON TINNHAN
 FOR EACH ROW
 DECLARE
   v_user VARCHAR2(200) := NVL(SYS_CONTEXT('MAC_CTX','USERNAME'), USER);
-  v_level NUMBER := TO_NUMBER(NVL(SYS_CONTEXT('MAC_CTX','USER_LEVEL'), '0'));
+  v_level NUMBER := TO_NUMBER(NVL(SYS_CONTEXT('MAC_CTX','USER_LEVEL'), '1'));
+  v_action VARCHAR2(200);
+  v_target VARCHAR2(400);
+  v_label NUMBER;
 BEGIN
   IF INSERTING THEN
-    INSERT INTO AUDIT_LOGS(MATK, ACTION, TARGET, SECURITYLABEL)
-    VALUES (v_user, 'INSERT_TINNHAN', 'MATN='||TO_CHAR(:NEW.MATN), :NEW.SECURITYLABEL);
+    v_action := 'INSERT_TINNHAN';
+    v_target := 'MATN='||TO_CHAR(:NEW.MATN);
+    v_label := :NEW.SECURITYLABEL;
   ELSIF UPDATING THEN
-    INSERT INTO AUDIT_LOGS(MATK, ACTION, TARGET, SECURITYLABEL)
-    VALUES (v_user, 'UPDATE_TINNHAN', 'MATN='||TO_CHAR(:NEW.MATN), :NEW.SECURITYLABEL);
+    v_action := 'UPDATE_TINNHAN';
+    v_target := 'MATN='||TO_CHAR(:NEW.MATN);
+    v_label := :NEW.SECURITYLABEL;
   ELSIF DELETING THEN
-    INSERT INTO AUDIT_LOGS(MATK, ACTION, TARGET, SECURITYLABEL)
-    VALUES (v_user, 'DELETE_TINNHAN', 'MATN='||TO_CHAR(:OLD.MATN), NVL(:OLD.SECURITYLABEL,0));
+    v_action := 'DELETE_TINNHAN';
+    v_target := 'MATN='||TO_CHAR(:OLD.MATN);
+    v_label := NVL(:OLD.SECURITYLABEL, 1);
   END IF;
+  
+  INSERT INTO AUDIT_LOGS(MATK, ACTION, TARGET, SECURITYLABEL)
+  VALUES (v_user, v_action, v_target, v_label);
 END;
 /
 
--- 6) Private chat enforcement triggers
+-- 6) Triggers: thực thi quy tắc chat riêng tư
 CREATE OR REPLACE TRIGGER TRG_THANHVIEN_PRIVATE_CHECK_INS
 BEFORE INSERT ON THANHVIEN
 FOR EACH ROW
@@ -293,9 +329,9 @@ BEGIN
   END;
 
   IF v_is_private = 'Y' THEN
-    SELECT COUNT(*) INTO v_count FROM THANHVIEN WHERE MACTC = :NEW.MACTC;
+    SELECT COUNT(*) INTO v_count FROM THANHVIEN WHERE MACTC = :NEW.MACTC AND DELETED_BY_MEMBER = 0;
     IF v_count >= 2 THEN
-      RAISE_APPLICATION_ERROR(-20070, 'Private chat can have exactly 2 members. Cannot add more.');
+      RAISE_APPLICATION_ERROR(-20070, 'Chat riêng tư chỉ có thể có đúng 2 thành viên. Không thể thêm người.');
     END IF;
   END IF;
 END;
@@ -318,15 +354,15 @@ BEGIN
   END IF;
 
   IF v_new_is_private = 'Y' THEN
-    SELECT COUNT(*) INTO v_count FROM THANHVIEN WHERE MACTC = :OLD.MACTC;
+    SELECT COUNT(*) INTO v_count FROM THANHVIEN WHERE MACTC = :OLD.MACTC AND DELETED_BY_MEMBER = 0;
     IF v_count > 2 THEN
-      RAISE_APPLICATION_ERROR(-20071, 'Cannot convert to private chat while more than 2 members exist.');
+      RAISE_APPLICATION_ERROR(-20071, 'Không thể chuyển sang chat riêng tư khi có hơn 2 thành viên.');
     END IF;
   END IF;
 END;
 /
 
--- 7) Stored Procedures
+-- 7) Các thủ tục lưu trữ (Stored Procedures)
 
 -- SP_TAO_TAIKHOAN: Tạo tài khoản mới
 CREATE OR REPLACE PROCEDURE SP_TAO_TAIKHOAN(
@@ -384,7 +420,7 @@ CREATE OR REPLACE PROCEDURE SP_THEM_THANHVIEN(
 ) AS
   v_count NUMBER;
 BEGIN
-  -- Kiểm tra member đã tồn tại chưa
+  -- Kiểm tra thành viên đã tồn tại chưa
   SELECT COUNT(*) INTO v_count FROM THANHVIEN 
   WHERE MACTC = p_mactc AND MATK = p_matk AND DELETED_BY_MEMBER = 0;
   
@@ -393,7 +429,7 @@ BEGIN
     VALUES(p_mactc, p_matk, p_quyen, p_maphanquyen);
     COMMIT;
   ELSE
-    RAISE_APPLICATION_ERROR(-20080, 'Member already exists in conversation.');
+    RAISE_APPLICATION_ERROR(-20080, 'Thành viên đã tồn tại trong cuộc trò chuyện.');
   END IF;
 END;
 /
@@ -419,7 +455,7 @@ BEGIN
   UPDATE THANHVIEN SET QUYEN = 'admin', MAPHANQUYEN = 'ADMIN'
   WHERE MACTC = p_mactc AND QUYEN = 'owner';
   
-  -- Nâng member được chọn lên owner
+  -- Nâng thành viên được chọn lên owner
   UPDATE THANHVIEN SET QUYEN = 'owner', MAPHANQUYEN = 'OWNER'
   WHERE MACTC = p_mactc AND MATK = p_matk;
   
@@ -435,13 +471,7 @@ CREATE OR REPLACE PROCEDURE SP_XOA_CUOCTROCHUYEN(
   p_mactc VARCHAR2
 ) AS
 BEGIN
-  -- Xóa tất cả tin nhắn (cascade sẽ xóa attachments)
-  DELETE FROM TINNHAN WHERE MACTC = p_mactc;
-  
-  -- Xóa thành viên
-  DELETE FROM THANHVIEN WHERE MACTC = p_mactc;
-  
-  -- Xóa cuộc trò chuyện
+  -- Cascade delete sẽ tự động xử lý TINNHAN, THANHVIEN
   DELETE FROM CUOCTROCHUYEN WHERE MACTC = p_mactc;
   
   COMMIT;
@@ -492,7 +522,7 @@ BEGIN
 END;
 /
 
--- SP_BAN_USER_GLOBAL: Cấm user toàn hệ thống
+-- SP_BAN_USER_GLOBAL: Cấm người dùng toàn hệ thống
 CREATE OR REPLACE PROCEDURE SP_BAN_USER_GLOBAL(
   p_matk VARCHAR2
 ) AS
@@ -502,7 +532,7 @@ BEGIN
 END;
 /
 
--- SP_UNBAN_USER_GLOBAL: Bỏ cấm user toàn hệ thống
+-- SP_UNBAN_USER_GLOBAL: Bỏ cấm người dùng toàn hệ thống
 CREATE OR REPLACE PROCEDURE SP_UNBAN_USER_GLOBAL(
   p_matk VARCHAR2
 ) AS
@@ -512,7 +542,7 @@ BEGIN
 END;
 /
 
--- SP_UPLOAD_ATTACHMENT: Upload file attachment
+-- SP_UPLOAD_ATTACHMENT: Tải lên tệp đính kèm
 CREATE OR REPLACE PROCEDURE SP_UPLOAD_ATTACHMENT(
   p_matk VARCHAR2,
   p_filename VARCHAR2,
@@ -545,7 +575,7 @@ BEGIN
 END;
 /
 
--- SP_GUI_TINNHAN_WITH_ATTACH: Gửi tin nhắn kèm attachment
+-- SP_GUI_TINNHAN_WITH_ATTACH: Gửi tin nhắn kèm tệp đính kèm
 CREATE OR REPLACE PROCEDURE SP_GUI_TINNHAN_WITH_ATTACH(
   p_mactc VARCHAR2,
   p_matk VARCHAR2,
@@ -565,7 +595,7 @@ BEGIN
 END;
 /
 
--- SP_GUI_TINNHAN_RIENG_AND_SEND: Gửi tin nhắn riêng (tự động tạo conversation nếu chưa có)
+-- SP_GUI_TINNHAN_RIENG_AND_SEND: Gửi tin nhắn riêng (tự động tạo cuộc trò chuyện nếu chưa có)
 CREATE OR REPLACE PROCEDURE SP_GUI_TINNHAN_RIENG_AND_SEND(
   p_matk_sender VARCHAR2,
   p_matk_receiver VARCHAR2,
@@ -574,37 +604,37 @@ CREATE OR REPLACE PROCEDURE SP_GUI_TINNHAN_RIENG_AND_SEND(
   p_mactc OUT VARCHAR2,
   p_matn OUT NUMBER
 ) AS
-  v_count NUMBER;
   v_mactc VARCHAR2(60);
 BEGIN
-  -- Tìm conversation riêng giữa 2 người
-  SELECT MACTC INTO v_mactc
-  FROM (
-    SELECT c.MACTC FROM CUOCTROCHUYEN c
-    WHERE c.IS_PRIVATE = 'Y'
-    AND EXISTS (SELECT 1 FROM THANHVIEN t1 WHERE t1.MACTC = c.MACTC AND t1.MATK = p_matk_sender)
-    AND EXISTS (SELECT 1 FROM THANHVIEN t2 WHERE t2.MACTC = c.MACTC AND t2.MATK = p_matk_receiver)
-    ORDER BY c.NGAYTAO DESC
-  ) WHERE ROWNUM = 1;
-  
-  p_mactc := v_mactc;
-EXCEPTION
-  WHEN NO_DATA_FOUND THEN
-    -- Tạo conversation mới
-    v_mactc := 'CTC_P_' || TO_CHAR(SYSTIMESTAMP, 'YYYYMMDDHH24MISSFF6');
-    
-    INSERT INTO CUOCTROCHUYEN(MACTC, MALOAICTC, TENCTC, NGUOIQL, IS_PRIVATE, CREATED_BY)
-    VALUES(v_mactc, 'PRIVATE', 'Private Chat', p_matk_sender, 'Y', p_matk_sender);
-    
-    INSERT INTO THANHVIEN(MACTC, MATK, QUYEN, MAPHANQUYEN)
-    VALUES(v_mactc, p_matk_sender, 'member', 'MEMBER');
-    
-    INSERT INTO THANHVIEN(MACTC, MATK, QUYEN, MAPHANQUYEN)
-    VALUES(v_mactc, p_matk_receiver, 'member', 'MEMBER');
+  -- Tìm cuộc trò chuyện riêng giữa 2 người
+  BEGIN
+    SELECT MACTC INTO v_mactc
+    FROM (
+      SELECT c.MACTC FROM CUOCTROCHUYEN c
+      WHERE c.IS_PRIVATE = 'Y'
+      AND EXISTS (SELECT 1 FROM THANHVIEN t1 WHERE t1.MACTC = c.MACTC AND t1.MATK = p_matk_sender AND t1.DELETED_BY_MEMBER = 0)
+      AND EXISTS (SELECT 1 FROM THANHVIEN t2 WHERE t2.MACTC = c.MACTC AND t2.MATK = p_matk_receiver AND t2.DELETED_BY_MEMBER = 0)
+      ORDER BY c.NGAYTAO DESC
+    ) WHERE ROWNUM = 1;
     
     p_mactc := v_mactc;
-    COMMIT;
-END;
+  EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+      -- Tạo cuộc trò chuyện mới
+      v_mactc := 'CTC_P_' || TO_CHAR(SYSTIMESTAMP, 'YYYYMMDDHH24MISSFF6');
+      
+      INSERT INTO CUOCTROCHUYEN(MACTC, MALOAICTC, TENCTC, NGUOIQL, IS_PRIVATE, CREATED_BY)
+      VALUES(v_mactc, 'PRIVATE', 'Chat Riêng Tư', p_matk_sender, 'Y', p_matk_sender);
+      
+      INSERT INTO THANHVIEN(MACTC, MATK, QUYEN, MAPHANQUYEN)
+      VALUES(v_mactc, p_matk_sender, 'member', 'MEMBER');
+      
+      INSERT INTO THANHVIEN(MACTC, MATK, QUYEN, MAPHANQUYEN)
+      VALUES(v_mactc, p_matk_receiver, 'member', 'MEMBER');
+      
+      p_mactc := v_mactc;
+  END;
+  
   -- Gửi tin nhắn
   INSERT INTO TINNHAN(MACTC, MATK, NOIDUNG, SECURITYLABEL, MALOAITN, MATRANGTHAI)
   VALUES(p_mactc, p_matk_sender, p_noidung, p_securitylabel, 'TEXT', 'ACTIVE')
@@ -692,27 +722,16 @@ BEGIN
 END;
 /
 
--- SP_XOA_TAIKHOAN_TOAN_BO: Xóa tài khoản hoàn toàn (cascade)
+-- SP_XOA_TAIKHOAN_TOAN_BO: Xóa tài khoản hoàn toàn (cascade sẽ xử lý hầu hết)
 CREATE OR REPLACE PROCEDURE SP_XOA_TAIKHOAN_TOAN_BO(
   p_matk VARCHAR2
 ) AS
 BEGIN
-  -- Xóa OTP
-  DELETE FROM XACTHUCOTP WHERE MATK = p_matk;
+  -- Cascade delete sẽ tự động xử lý hầu hết các bản ghi liên quan
+  -- Chỉ cần xóa rõ ràng các bản ghi không có cascade
+  DELETE FROM AUDIT_LOGS WHERE MATK = p_matk;
   
-  -- Xóa attachments
-  DELETE FROM ATTACHMENT WHERE MATK = p_matk;
-  
-  -- Xóa tin nhắn
-  DELETE FROM TINNHAN WHERE MATK = p_matk;
-  
-  -- Xóa thành viên
-  DELETE FROM THANHVIEN WHERE MATK = p_matk;
-  
-  -- Xóa người dùng
-  DELETE FROM NGUOIDUNG WHERE MATK = p_matk;
-  
-  -- Xóa tài khoản
+  -- Xóa tài khoản (cascade sẽ xóa phần còn lại)
   DELETE FROM TAIKHOAN WHERE MATK = p_matk;
   
   COMMIT;
@@ -720,5 +739,5 @@ END;
 /
 
 --------------------------------------------------------------------------------
--- End of schema.sql (Complete with all procedures)
+-- Kết thúc schema.sql (Hoàn chỉnh với tất cả các thủ tục)
 --------------------------------------------------------------------------------
