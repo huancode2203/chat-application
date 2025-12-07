@@ -133,16 +133,7 @@ INSERT INTO NGUOIDUNG(MATK, MAPB, MACV, HOVATEN, EMAIL, SDT, NGAYSINH, DIACHI, B
 VALUES('TK007', 'PB005', 'CV006', N'Đặng Văn Hùng', 'hung.dang@company.com', '0907890123', 
        TO_DATE('2000-12-05','YYYY-MM-DD'), N'147 Trần Hưng Đạo, Q5, TP.HCM', N'Thực tập sinh IT');
 
--- ============================================================================
--- 10) CÀI ĐẶT NGƯỜI DÙNG MẶC ĐỊNH
--- ============================================================================
-INSERT INTO USER_SETTINGS(MATK, THEME, LANGUAGE, ENCRYPTION_ENABLED) VALUES('TK001', 'dark', 'vi', 1);
-INSERT INTO USER_SETTINGS(MATK, THEME, LANGUAGE, ENCRYPTION_ENABLED) VALUES('TK002', 'light', 'vi', 1);
-INSERT INTO USER_SETTINGS(MATK, THEME, LANGUAGE, ENCRYPTION_ENABLED) VALUES('TK003', 'dark', 'vi', 1);
-INSERT INTO USER_SETTINGS(MATK, THEME, LANGUAGE, ENCRYPTION_ENABLED) VALUES('TK004', 'light', 'vi', 0);
-INSERT INTO USER_SETTINGS(MATK, THEME, LANGUAGE, ENCRYPTION_ENABLED) VALUES('TK005', 'light', 'vi', 0);
-INSERT INTO USER_SETTINGS(MATK, THEME, LANGUAGE, ENCRYPTION_ENABLED) VALUES('TK006', 'dark', 'en', 1);
-INSERT INTO USER_SETTINGS(MATK, THEME, LANGUAGE, ENCRYPTION_ENABLED) VALUES('TK007', 'light', 'vi', 0);
+-- USER_SETTINGS removed - not needed
 
 -- ============================================================================
 -- 11) CUỘC TRÒ CHUYỆN MẪU

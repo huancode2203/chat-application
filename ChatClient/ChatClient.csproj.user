@@ -11,21 +11,6 @@
     <Compile Update="Controls\MessageBubble.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Update="Forms\ChatForm.Attachments.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Update="Forms\ChatForm.Bubbles.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Update="Forms\ChatForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Update="Forms\ChatForm.Features.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Update="Forms\ChatForm.UIEnhancements.cs">
-      <SubType>Form</SubType>
-    </Compile>
     <Compile Update="Forms\ChatFormNew.cs">
       <SubType>Form</SubType>
     </Compile>

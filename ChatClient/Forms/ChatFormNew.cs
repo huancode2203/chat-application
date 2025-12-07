@@ -78,7 +78,7 @@ namespace ChatClient.Forms
             btnViewMembers.Click += async (s, e) => await ViewMembersAsync();
             btnRefresh.Click += async (s, e) => await RefreshAsync();
             btnProfile.Click += (s, e) => ShowUserProfile();
-            btnLogout.Click += (s, e) => { Close(); };
+            btnLogout.Click += BtnLogout_Click;
             
             btnSend.Click += async (s, e) => await SendMessageAsync();
             btnAttachment.Click += async (s, e) => await SendAttachmentAsync();
@@ -983,6 +983,28 @@ namespace ChatClient.Forms
             var end = content.IndexOf(']', start);
             if (end <= start) return "";
             return content.Substring(start + 6, end - start - 6).Trim();
+        }
+
+        private void BtnLogout_Click(object sender, EventArgs e)
+        {
+            var result = MessageBox.Show(
+                "Đăng xuất khỏi tài khoản?\n\nBạn sẽ quay về màn hình đăng nhập.",
+                "Xác nhận đăng xuất",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            if (result == DialogResult.Yes)
+            {
+                try
+                {
+                    _socketClient?.Dispose();
+                }
+                catch { /* Ignore disposal errors */ }
+
+                // Close this form và trigger showing LoginForm in Program.cs
+                this.DialogResult = DialogResult.Cancel; // Signal logout
+                this.Close();
+            }
         }
         #endregion
     }

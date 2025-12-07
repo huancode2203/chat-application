@@ -20,6 +20,7 @@ namespace ChatClient.Forms
         // Controls
         private ListView lstMembers = null!;
         private ColumnHeader colUsername = null!;
+        private ColumnHeader colEmail = null!;
         private ColumnHeader colRole = null!;
         private ColumnHeader colBanStatus = null!;
         private ColumnHeader colJoinedDate = null!;
@@ -58,6 +59,7 @@ namespace ChatClient.Forms
         {
             lstMembers = new ListView();
             colUsername = new ColumnHeader();
+            colEmail = new ColumnHeader();
             colRole = new ColumnHeader();
             colBanStatus = new ColumnHeader();
             colJoinedDate = new ColumnHeader();
@@ -71,7 +73,7 @@ namespace ChatClient.Forms
             SuspendLayout();
 
             // lstMembers
-            lstMembers.Columns.AddRange(new ColumnHeader[] { colUsername, colRole, colBanStatus, colJoinedDate });
+            lstMembers.Columns.AddRange(new ColumnHeader[] { colUsername, colEmail, colRole, colBanStatus, colJoinedDate });
             lstMembers.FullRowSelect = true;
             lstMembers.GridLines = true;
             lstMembers.Location = new Point(20, 70);
@@ -84,13 +86,15 @@ namespace ChatClient.Forms
 
             // Columns
             colUsername.Text = "Người dùng";
-            colUsername.Width = 180;
+            colUsername.Width = 150;
+            colEmail.Text = "Email";
+            colEmail.Width = 180;
             colRole.Text = "Vai trò";
-            colRole.Width = 150;
+            colRole.Width = 120;
             colBanStatus.Text = "Trạng thái";
-            colBanStatus.Width = 200;
+            colBanStatus.Width = 120;
             colJoinedDate.Text = "Ngày tham gia";
-            colJoinedDate.Width = 180;
+            colJoinedDate.Width = 140;
 
             // btnAddMember
             btnAddMember.Location = new Point(20, 540);
@@ -210,8 +214,8 @@ namespace ChatClient.Forms
 
                 var selectedUser = lstMembers.SelectedItems[0].Tag?.ToString();
                 var isOwnProfile = selectedUser == _currentUser.Matk || selectedUser == _currentUser.Username;
-                var isOwner = lstMembers.SelectedItems[0].SubItems[1].Text.ToLower().Contains("owner");
-                var isMuted = lstMembers.SelectedItems[0].SubItems[2].Text.Contains("Tắt tiếng");
+                var isOwner = lstMembers.SelectedItems[0].SubItems[2].Text.ToLower().Contains("owner");
+                var isMuted = lstMembers.SelectedItems[0].SubItems[3].Text.Contains("Tắt tiếng");
 
                 // Always allow viewing profile
                 _contextMenu.Items[0].Enabled = true;
@@ -251,7 +255,7 @@ namespace ChatClient.Forms
                 var hasSelection = lstMembers.SelectedItems.Count > 0;
                 var selectedUser = hasSelection ? lstMembers.SelectedItems[0].Tag?.ToString() : null;
                 var isOwnProfile = selectedUser == _currentUser.Matk;
-                var isOwner = hasSelection && lstMembers.SelectedItems[0].SubItems[1].Text.ToLower().Contains("owner");
+                var isOwner = hasSelection && lstMembers.SelectedItems[0].SubItems[2].Text.ToLower().Contains("owner");
 
                 btnRemoveMember.Enabled = hasSelection && !isOwnProfile && !isOwner;
                 btnBanMember.Enabled = hasSelection && !isOwnProfile && !isOwner;
@@ -259,7 +263,7 @@ namespace ChatClient.Forms
 
                 if (hasSelection)
                 {
-                    var isMuted = lstMembers.SelectedItems[0].SubItems[2].Text.Contains("Tắt tiếng");
+                    var isMuted = lstMembers.SelectedItems[0].SubItems[3].Text.Contains("Tắt tiếng");
                     btnBanMember.Text = isMuted ? "🔇 Đã tắt tiếng" : "🔇 Tắt tiếng";
                     btnBanMember.Enabled = !isMuted && !isOwnProfile && !isOwner;
                     btnUnbanMember.Enabled = isMuted && !isOwnProfile;
@@ -297,6 +301,9 @@ namespace ChatClient.Forms
                 foreach (var member in response.Members.OrderBy(m => m.Role == "owner" ? 0 : m.Role == "admin" ? 1 : 2))
                 {
                     var item = new ListViewItem(member.Username);
+                    
+                    // Email column
+                    item.SubItems.Add(string.IsNullOrEmpty(member.Email) ? "(Chưa có)" : member.Email);
 
                     var roleText = member.Role.ToLower() switch
                     {
@@ -307,9 +314,9 @@ namespace ChatClient.Forms
                     };
                     item.SubItems.Add(roleText);
 
-                    var muteStatus = member.IsBanned ? "🔇 Tắt tiếng" : "✅ Bình thường";
+                    var muteStatus = member.IsMuted ? "🔇 Tắt tiếng" : "✅ Bình thường";
                     var muteSubItem = item.SubItems.Add(muteStatus);
-                    muteSubItem.ForeColor = member.IsBanned ? Color.Orange : Color.Green;
+                    muteSubItem.ForeColor = member.IsMuted ? Color.Orange : Color.Green;
 
                     item.SubItems.Add(member.JoinedDate.ToString("dd/MM/yyyy HH:mm"));
                     item.Tag = string.IsNullOrWhiteSpace(member.Matk) ? member.Username : member.Matk;

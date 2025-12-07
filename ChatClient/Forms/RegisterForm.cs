@@ -38,10 +38,11 @@ namespace ChatClient.Forms
             var password = txtPassword.Text.Trim();
             var confirmPassword = txtConfirmPassword.Text.Trim();
             var email = txtEmail.Text.Trim();
+            var hovaten = txtHovaten.Text.Trim();
             var clearanceLevel = cbClearance.SelectedIndex + 1;
 
             if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password) ||
-                string.IsNullOrWhiteSpace(email))
+                string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(hovaten))
             {
                 lblStatus.Text = "Vui lòng điền đầy đủ thông tin.";
                 return;
@@ -74,7 +75,7 @@ namespace ChatClient.Forms
                 using var socketClient = new SocketClientService("127.0.0.1", 9000);
                 await socketClient.ConnectAsync();
 
-                var response = await socketClient.RegisterAsync(username, password, email, clearanceLevel);
+                var response = await socketClient.RegisterAsync(username, password, email, clearanceLevel, hovaten);
                 if (response == null || !response.Success)
                 {
                     lblStatus.Text = response?.Message ?? "Lỗi đăng ký.";
@@ -85,7 +86,7 @@ namespace ChatClient.Forms
                 MessageBox.Show("Đăng ký thành công! Vui lòng xác minh OTP được gửi đến email của bạn.", 
                     "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                var verifyForm = new VerifyOtpForm(username);
+                var verifyForm = new VerifyOtpForm(username, email);
                 verifyForm.ShowDialog();
                 Close();
             }

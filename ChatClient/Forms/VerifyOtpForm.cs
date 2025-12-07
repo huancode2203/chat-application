@@ -14,13 +14,15 @@ namespace ChatClient.Forms
     public partial class VerifyOtpForm : Form
     {
         private readonly string _username;
+        private readonly string _email;
         private Timer _countdownTimer;
         private int _remainingSeconds = 600; // 10 minutes
         private int _resendCooldown = 0;
 
-        public VerifyOtpForm(string username)
+        public VerifyOtpForm(string username, string email = "")
         {
             _username = username;
+            _email = string.IsNullOrEmpty(email) ? "***@***.***" : email;
             InitializeComponent();
             CustomizeForm();
             SetupEventHandlers();
@@ -45,8 +47,8 @@ namespace ChatClient.Forms
                 }
             };
 
-            // Display username
-            lblUserInfo.Text = $"Tài khoản: {_username}";
+            // Display username and email
+            lblUserInfo.Text = $"Tài khoản: {_username}\n📧 Email: {_email}\n\nVui lòng kiểm tra hộp thư và nhập mã OTP gồm 6 chữ số.";
 
             // Customize buttons
             CustomizeButton(btnVerify, Color.FromArgb(155, 89, 182), Color.White);

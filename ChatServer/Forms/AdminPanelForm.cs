@@ -131,7 +131,18 @@ namespace ChatServer.Forms
 
         private void ShowCreateUserDialog()
         {
-            MessageBox.Show("Create user dialog - To be implemented", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            try
+            {
+                using var createForm = new UserEditForm(_dbContext);
+                if (createForm.ShowDialog(this) == DialogResult.OK)
+                {
+                    _ = LoadUsersAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi mở form tạo user: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private void ShowEditUserDialog()
@@ -141,7 +152,23 @@ namespace ChatServer.Forms
                 MessageBox.Show("Vui lòng chọn một user để chỉnh sửa.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
-            MessageBox.Show("Edit user dialog - To be implemented", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+            var username = dgvUsers.SelectedRows[0].Cells["Username"].Value?.ToString();
+            if (string.IsNullOrEmpty(username))
+                return;
+
+            try
+            {
+                using var editForm = new UserEditForm(_dbContext, username);
+                if (editForm.ShowDialog(this) == DialogResult.OK)
+                {
+                    _ = LoadUsersAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi mở form chỉnh sửa: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private async Task DeleteUserAsync()
@@ -175,7 +202,6 @@ namespace ChatServer.Forms
                     var deleteCommands = new[] {
                         "DELETE FROM XACTHUCOTP WHERE MATK = :p",
                         "DELETE FROM AUDIT_LOGS WHERE MATK = :p",
-                        "DELETE FROM USER_SETTINGS WHERE MATK = :p",
                         "DELETE FROM ENCRYPTION_KEYS WHERE MATK = :p",
                         "DELETE FROM TINNHAN_ATTACH WHERE MATN IN (SELECT MATN FROM TINNHAN WHERE MATK = :p)",
                         "DELETE FROM ATTACHMENT WHERE MATK = :p",
@@ -274,7 +300,9 @@ namespace ChatServer.Forms
                 }
 
                 btnRefreshConversations.Enabled = false;
-                var conversations = await Task.Run(() => _dbContext.GetAllConversationsAsync().Result);
+                
+                // Call async method directly without Task.Run and .Result
+                var conversations = await _dbContext.GetAllConversationsAsync();
                 
                 dgvConversations.DataSource = conversations.Select(c => new
                 {
@@ -285,14 +313,14 @@ namespace ChatServer.Forms
                     c.Nguoiql,
                     c.MemberCount,
                     c.MessageCount,
-                    c.NgayTao
+                    NgayTao = c.NgayTao.ToString("dd/MM/yyyy HH:mm")
                 }).ToList();
                 
                 btnRefreshConversations.Enabled = true;
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Lỗi tải conversations:\n{ex.Message}\n\nStack Trace:\n{ex.StackTrace}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 btnRefreshConversations.Enabled = true;
             }
         }
@@ -348,15 +376,16 @@ namespace ChatServer.Forms
                 btnViewMessages.Enabled = false;
                 btnRefreshMessages.Enabled = false;
                 
-                var messages = await Task.Run(() => _dbContext.GetConversationMessagesAdminAsync(mactc, 100).Result);
+                // Call async method directly without Task.Run and .Result
+                var messages = await _dbContext.GetConversationMessagesAdminAsync(mactc, 100);
                 
                 dgvMessages.DataSource = messages.Select(m => new
                 {
                     m.Matn,
                     m.Username,
-                    m.Noidung,
-                    SecurityLabel = m.SecurityLabel,
-                    m.Ngaygui,
+                    Noidung = m.Noidung.Length > 100 ? m.Noidung.Substring(0, 100) + "..." : m.Noidung,
+                    SecurityLabel = $"Mức {m.SecurityLabel}",
+                    Ngaygui = m.Ngaygui.ToString("dd/MM/yyyy HH:mm:ss"),
                     m.Maloaitn,
                     m.Matrangthai
                 }).ToList();
@@ -366,7 +395,7 @@ namespace ChatServer.Forms
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Lỗi tải messages:\n{ex.Message}\n\nStack Trace:\n{ex.StackTrace}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 btnViewMessages.Enabled = true;
                 btnRefreshMessages.Enabled = true;
             }

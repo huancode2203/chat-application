@@ -278,6 +278,17 @@ namespace ChatServer.Services
                     clearanceLevel
                 );
 
+                // Lưu thông tin bổ sung (email, họ tên)
+                var hovaten = string.IsNullOrWhiteSpace(request.Hovaten) ? "" : request.Hovaten;
+                try
+                {
+                    await _dbContext.UpdateUserInfoAsync(request.SenderUsername, request.Email, hovaten, null, null, null);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Warning: Failed to update user info: {ex.Message}");
+                }
+
                 var otp = PasswordHelper.GenerateOtp();
                 var otpHash = PasswordHelper.HashPassword(otp);
                 
@@ -1155,7 +1166,9 @@ namespace ChatServer.Services
                     Role = m.Role,
                     IsBanned = m.IsBanned,
                     IsMuted = m.IsMuted,
-                    JoinedDate = m.NgayThamGia
+                    JoinedDate = m.NgayThamGia,
+                    Email = m.Email,
+                    Hovaten = m.Hovaten
                 }).ToArray();
 
                 return JsonSerializer.Serialize(new ServerResponse
@@ -2095,14 +2108,22 @@ namespace ChatServer.Services
                     : request.MimeType;
                 var fileSize = request.FileSize > 0 ? request.FileSize : bytes.LongLength;
 
+                // ===== MÃ HÓA HYBRID (RSA+AES) CHO ATTACHMENT =====
+                // Hybrid: RSA mã hóa AES key, AES mã hóa data
+                var encryptedPackage = EncryptionHelper.HybridEncrypt(bytes);
+                // Lưu package như ASCII bytes (base64 string)
+                var encryptedBytes = System.Text.Encoding.ASCII.GetBytes(encryptedPackage);
+                
+                // Lưu package đã mã hóa (format: base64Data|base64Key|base64IV)
                 var attachmentId = await _dbContext.UploadAttachmentAsync(
                     account.Matk,
                     request.FileName,
                     mimeType,
                     fileSize,
-                    bytes);
+                    encryptedBytes,
+                    1); // IS_ENCRYPTED = 1
 
-                await _dbContext.WriteAuditLogAsync(account.Matk, "UPLOAD_ATTACHMENT", request.FileName, request.SecurityLabel);
+                await _dbContext.WriteAuditLogAsync(account.Matk, "UPLOAD_ENCRYPTED_ATTACHMENT", request.FileName, request.SecurityLabel);
 
                 return JsonSerializer.Serialize(new ServerResponse
                 {
@@ -2332,6 +2353,7 @@ namespace ChatServer.Services
         public int ClearanceLevel { get; set; }
         public string Password { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
+        public string Hovaten { get; set; } = string.Empty;
         public string Otp { get; set; } = string.Empty;
         public string NewPassword { get; set; } = string.Empty;
         // Conversation fields
@@ -2458,5 +2480,7 @@ namespace ChatServer.Services
         public bool IsBanned { get; set; } // IS_BANNED
         public bool IsMuted { get; set; } // IS_MUTED
         public DateTime JoinedDate { get; set; } // NGAYTHAMGIA
+        public string Email { get; set; } = string.Empty; // EMAIL
+        public string Hovaten { get; set; } = string.Empty; // HOVATEN
     }
 }

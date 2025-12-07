@@ -35,56 +35,10 @@ namespace ChatClient.Forms
 
         private void SetupModernUI()
         {
-            // Modern form styling
-            this.BackColor = System.Drawing.Color.FromArgb(245, 247, 250);
-            this.Font = new System.Drawing.Font("Segoe UI", 9F);
-            
+            // Các style đã được set trong Designer.cs
+            // Method này chỉ để set các thuộc tính runtime nếu cần
             if (this.Text == "LoginForm")
                 this.Text = "Đăng nhập - Chat Application";
-
-            // Style buttons with modern colors
-            if (btnLogin != null)
-            {
-                btnLogin.BackColor = System.Drawing.Color.FromArgb(0, 132, 255);
-                btnLogin.ForeColor = System.Drawing.Color.White;
-                btnLogin.FlatStyle = FlatStyle.Flat;
-                btnLogin.FlatAppearance.BorderSize = 0;
-                btnLogin.Cursor = Cursors.Hand;
-                btnLogin.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Bold);
-            }
-
-            if (btnRegister != null)
-            {
-                btnRegister.BackColor = System.Drawing.Color.FromArgb(40, 167, 69);
-                btnRegister.ForeColor = System.Drawing.Color.White;
-                btnRegister.FlatStyle = FlatStyle.Flat;
-                btnRegister.FlatAppearance.BorderSize = 0;
-                btnRegister.Cursor = Cursors.Hand;
-            }
-
-            if (btnForgotPassword != null)
-            {                btnForgotPassword.BackColor = System.Drawing.Color.FromArgb(108, 117, 125);
-                btnForgotPassword.ForeColor = System.Drawing.Color.White;
-                btnForgotPassword.FlatStyle = FlatStyle.Flat;
-                btnForgotPassword.FlatAppearance.BorderSize = 0;
-                btnForgotPassword.Cursor = Cursors.Hand;
-            }
-
-            if (btnRefreshCaptcha != null)
-            {
-                btnRefreshCaptcha.BackColor = System.Drawing.Color.FromArgb(255, 193, 7);
-                btnRefreshCaptcha.ForeColor = System.Drawing.Color.Black;
-                btnRefreshCaptcha.FlatStyle = FlatStyle.Flat;
-                btnRefreshCaptcha.FlatAppearance.BorderSize = 0;
-                btnRefreshCaptcha.Cursor = Cursors.Hand;
-                btnRefreshCaptcha.Text = "🔄 Tải lại";
-            }
-
-            if (lblStatus != null)
-            {
-                lblStatus.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Italic);
-                lblStatus.ForeColor = System.Drawing.Color.FromArgb(220, 53, 69);
-            }
         }
 
         private void SetupEventHandlers()
@@ -309,7 +263,22 @@ namespace ChatClient.Forms
                 await Task.Delay(300);
                 
                 var chatForm = new ChatFormNew(user);
-                chatForm.FormClosed += (_, _) => Close();
+                chatForm.FormClosed += (s, args) =>
+                {
+                    // If user logged out (DialogResult.Cancel), show login form again
+                    if (chatForm.DialogResult == DialogResult.Cancel)
+                    {
+                        this.Show();
+                        // Clear password for security
+                        txtPassword.Text = "";
+                        txtUsername.Focus();
+                    }
+                    else
+                    {
+                        // Normal close - exit application
+                        Close();
+                    }
+                };
                 chatForm.Show();
                 Hide();
             }

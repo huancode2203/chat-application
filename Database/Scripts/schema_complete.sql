@@ -296,22 +296,7 @@ CREATE TABLE ENCRYPTION_KEYS (
 
 CREATE INDEX IDX_ENCKEY_MATK ON ENCRYPTION_KEYS(MATK);
 
--- ============================================================================
--- 3.7) BẢNG CÀI ĐẶT NGƯỜI DÙNG
--- ============================================================================
-
-CREATE TABLE USER_SETTINGS (
-  MATK                VARCHAR2(20) PRIMARY KEY,
-  THEME               VARCHAR2(20) DEFAULT 'light',
-  LANGUAGE            VARCHAR2(10) DEFAULT 'vi',
-  NOTIFICATION_SOUND  NUMBER(1) DEFAULT 1,
-  NOTIFICATION_DESKTOP NUMBER(1) DEFAULT 1,
-  AUTO_DOWNLOAD_MEDIA NUMBER(1) DEFAULT 1,
-  ENCRYPTION_ENABLED  NUMBER(1) DEFAULT 0,
-  SHOW_ONLINE_STATUS  NUMBER(1) DEFAULT 1,
-  READ_RECEIPTS       NUMBER(1) DEFAULT 1,
-  CONSTRAINT FK_SETTINGS_TAIKHOAN FOREIGN KEY(MATK) REFERENCES TAIKHOAN(MATK) ON DELETE CASCADE
-);
+-- USER_SETTINGS table removed - not needed for core functionality
 
 -- ============================================================================
 -- 3.8) PACKAGE MAC_CTX (Quản lý context bảo mật)
@@ -546,8 +531,7 @@ BEGIN
   INSERT INTO TAIKHOAN(MATK, TENTK, PASSWORD_HASH, MAVAITRO, CLEARANCELEVEL, PUBLIC_KEY)
   VALUES(p_matk, p_tentk, p_password_hash, p_mavaitro, p_clearance, p_public_key);
   
-  -- Tạo settings mặc định
-  INSERT INTO USER_SETTINGS(MATK) VALUES(p_matk);
+  -- Settings removed
   
   COMMIT;
 END;
@@ -795,17 +779,12 @@ BEGIN
       pb.TENPB AS PHONGBAN,
       cv.MACV,
       cv.TENCV AS CHUCVU,
-      v.TENVAITRO AS VAITRO,
-      s.THEME,
-      s.LANGUAGE,
-      s.NOTIFICATION_SOUND,
-      s.ENCRYPTION_ENABLED
+      v.TENVAITRO AS VAITRO
     FROM TAIKHOAN t
     LEFT JOIN NGUOIDUNG n ON t.MATK = n.MATK
     LEFT JOIN PHONGBAN pb ON n.MAPB = pb.MAPB
     LEFT JOIN CHUCVU cv ON n.MACV = cv.MACV
     LEFT JOIN VAITRO v ON t.MAVAITRO = v.MAVAITRO
-    LEFT JOIN USER_SETTINGS s ON t.MATK = s.MATK
     WHERE t.MATK = p_matk;
 END;
 /
@@ -836,48 +815,7 @@ BEGIN
 END;
 /
 
--- Cập nhật cài đặt người dùng
-CREATE OR REPLACE PROCEDURE SP_CAPNHAT_CAIDAT(
-  p_matk VARCHAR2,
-  p_theme VARCHAR2 DEFAULT NULL,
-  p_language VARCHAR2 DEFAULT NULL,
-  p_notification_sound NUMBER DEFAULT NULL,
-  p_notification_desktop NUMBER DEFAULT NULL,
-  p_encryption_enabled NUMBER DEFAULT NULL,
-  p_show_online_status NUMBER DEFAULT NULL,
-  p_read_receipts NUMBER DEFAULT NULL
-) AS
-  v_count NUMBER;
-BEGIN
-  SELECT COUNT(*) INTO v_count FROM USER_SETTINGS WHERE MATK = p_matk;
-  
-  IF v_count = 0 THEN
-    INSERT INTO USER_SETTINGS(MATK, THEME, LANGUAGE, NOTIFICATION_SOUND, 
-                              NOTIFICATION_DESKTOP, ENCRYPTION_ENABLED,
-                              SHOW_ONLINE_STATUS, READ_RECEIPTS)
-    VALUES(p_matk, 
-           NVL(p_theme, 'light'), 
-           NVL(p_language, 'vi'),
-           NVL(p_notification_sound, 1),
-           NVL(p_notification_desktop, 1),
-           NVL(p_encryption_enabled, 0),
-           NVL(p_show_online_status, 1),
-           NVL(p_read_receipts, 1));
-  ELSE
-    UPDATE USER_SETTINGS SET
-      THEME = NVL(p_theme, THEME),
-      LANGUAGE = NVL(p_language, LANGUAGE),
-      NOTIFICATION_SOUND = NVL(p_notification_sound, NOTIFICATION_SOUND),
-      NOTIFICATION_DESKTOP = NVL(p_notification_desktop, NOTIFICATION_DESKTOP),
-      ENCRYPTION_ENABLED = NVL(p_encryption_enabled, ENCRYPTION_ENABLED),
-      SHOW_ONLINE_STATUS = NVL(p_show_online_status, SHOW_ONLINE_STATUS),
-      READ_RECEIPTS = NVL(p_read_receipts, READ_RECEIPTS)
-    WHERE MATK = p_matk;
-  END IF;
-  
-  COMMIT;
-END;
-/
+-- SP_CAPNHAT_CAIDAT removed - USER_SETTINGS table not used
 
 -- Lưu khóa mã hóa
 CREATE OR REPLACE PROCEDURE SP_LUU_ENCRYPTION_KEY(
@@ -1107,6 +1045,234 @@ CREATE OR REPLACE PROCEDURE SP_XOA_TAIKHOAN(p_matk VARCHAR2) AS
 BEGIN
   DELETE FROM AUDIT_LOGS WHERE MATK = p_matk;
   DELETE FROM TAIKHOAN WHERE MATK = p_matk;
+  COMMIT;
+END;
+/
+
+-- ============================================================================
+-- 4.5) PROCEDURES CHO GROUP MANAGEMENT
+-- ============================================================================
+
+-- Thêm cột IS_ARCHIVED và ARCHIVED_AT cho CUOCTROCHUYEN
+BEGIN
+  EXECUTE IMMEDIATE 'ALTER TABLE CUOCTROCHUYEN ADD IS_ARCHIVED NUMBER(1) DEFAULT 0';
+EXCEPTION WHEN OTHERS THEN
+  IF SQLCODE = -1430 THEN NULL;
+  ELSE RAISE;
+  END IF;
+END;
+/
+
+BEGIN
+  EXECUTE IMMEDIATE 'ALTER TABLE CUOCTROCHUYEN ADD ARCHIVED_AT TIMESTAMP';
+EXCEPTION WHEN OTHERS THEN
+  IF SQLCODE = -1430 THEN NULL;
+  ELSE RAISE;
+  END IF;
+END;
+/
+
+-- Xóa chat riêng tư một phía
+CREATE OR REPLACE PROCEDURE SP_XOA_CHAT_RIENGTU_MOTPHIA(
+  p_mactc VARCHAR2,
+  p_matk VARCHAR2
+) AS
+  v_is_private VARCHAR2(1);
+BEGIN
+  SELECT IS_PRIVATE INTO v_is_private FROM CUOCTROCHUYEN WHERE MACTC = p_mactc;
+  
+  IF v_is_private != 'Y' THEN
+    RAISE_APPLICATION_ERROR(-20100, 'Chỉ có thể xóa một phía với chat riêng tư.');
+  END IF;
+  
+  UPDATE THANHVIEN SET DELETED_BY_MEMBER = 1 WHERE MACTC = p_mactc AND MATK = p_matk;
+  
+  INSERT INTO AUDIT_LOGS(MATK, ACTION, TARGET, SECURITYLABEL)
+  VALUES(p_matk, 'DELETE_PRIVATE_CHAT_ONESIDE', p_mactc, 0);
+  
+  COMMIT;
+END;
+/
+
+-- Rời nhóm
+CREATE OR REPLACE PROCEDURE SP_ROI_NHOM(
+  p_mactc VARCHAR2,
+  p_matk VARCHAR2
+) AS
+  v_quyen VARCHAR2(100);
+  v_is_private VARCHAR2(1);
+BEGIN
+  SELECT IS_PRIVATE INTO v_is_private FROM CUOCTROCHUYEN WHERE MACTC = p_mactc;
+  IF v_is_private = 'Y' THEN
+    RAISE_APPLICATION_ERROR(-20101, 'Không thể rời chat riêng tư.');
+  END IF;
+  
+  SELECT QUYEN INTO v_quyen FROM THANHVIEN WHERE MACTC = p_mactc AND MATK = p_matk;
+  IF v_quyen = 'owner' THEN
+    RAISE_APPLICATION_ERROR(-20102, 'Chủ nhóm không thể rời nhóm.');
+  END IF;
+  
+  DELETE FROM THANHVIEN WHERE MACTC = p_mactc AND MATK = p_matk;
+  
+  INSERT INTO AUDIT_LOGS(MATK, ACTION, TARGET, SECURITYLABEL)
+  VALUES(p_matk, 'LEAVE_GROUP', p_mactc, 0);
+  
+  COMMIT;
+EXCEPTION
+  WHEN NO_DATA_FOUND THEN
+    RAISE_APPLICATION_ERROR(-20103, 'Bạn không phải thành viên của nhóm.');
+END;
+/
+
+-- Xóa/Archive nhóm (chỉ owner)
+CREATE OR REPLACE PROCEDURE SP_XOA_NHOM(
+  p_mactc VARCHAR2,
+  p_matk VARCHAR2
+) AS
+  v_quyen VARCHAR2(100);
+  v_is_private VARCHAR2(1);
+BEGIN
+  SELECT IS_PRIVATE INTO v_is_private FROM CUOCTROCHUYEN WHERE MACTC = p_mactc;
+  IF v_is_private = 'Y' THEN
+    RAISE_APPLICATION_ERROR(-20104, 'Không thể xóa chat riêng tư bằng chức năng này.');
+  END IF;
+  
+  SELECT QUYEN INTO v_quyen FROM THANHVIEN WHERE MACTC = p_mactc AND MATK = p_matk;
+  IF v_quyen != 'owner' THEN
+    RAISE_APPLICATION_ERROR(-20105, 'Chỉ chủ nhóm mới có thể xóa nhóm.');
+  END IF;
+  
+  UPDATE CUOCTROCHUYEN SET IS_ARCHIVED = 1, ARCHIVED_AT = SYSTIMESTAMP WHERE MACTC = p_mactc;
+  
+  INSERT INTO AUDIT_LOGS(MATK, ACTION, TARGET, SECURITYLABEL)
+  VALUES(p_matk, 'ARCHIVE_GROUP', p_mactc, 0);
+  
+  COMMIT;
+EXCEPTION
+  WHEN NO_DATA_FOUND THEN
+    RAISE_APPLICATION_ERROR(-20106, 'Nhóm không tồn tại.');
+END;
+/
+
+-- Xóa archive
+CREATE OR REPLACE PROCEDURE SP_XOA_ARCHIVE(
+  p_mactc VARCHAR2,
+  p_matk VARCHAR2
+) AS
+  v_is_archived NUMBER;
+BEGIN
+  SELECT IS_ARCHIVED INTO v_is_archived FROM CUOCTROCHUYEN WHERE MACTC = p_mactc;
+  IF v_is_archived != 1 THEN
+    RAISE_APPLICATION_ERROR(-20107, 'Nhóm chưa được archive.');
+  END IF;
+  
+  DELETE FROM THANHVIEN WHERE MACTC = p_mactc AND MATK = p_matk;
+  
+  INSERT INTO AUDIT_LOGS(MATK, ACTION, TARGET, SECURITYLABEL)
+  VALUES(p_matk, 'DELETE_ARCHIVE', p_mactc, 0);
+  
+  COMMIT;
+END;
+/
+
+-- ============================================================================
+-- 4.6) PROCEDURES CHO ADMIN PANEL
+-- ============================================================================
+
+-- Cập nhật thông tin người dùng (Admin)
+CREATE OR REPLACE PROCEDURE SP_CAPNHAT_NGUOIDUNG_ADMIN(
+    p_matk VARCHAR2,
+    p_email VARCHAR2 DEFAULT NULL,
+    p_hovaten VARCHAR2 DEFAULT NULL,
+    p_sdt VARCHAR2 DEFAULT NULL,
+    p_clearance NUMBER DEFAULT NULL,
+    p_mavaitro VARCHAR2 DEFAULT NULL
+) AS
+BEGIN
+    IF p_email IS NOT NULL OR p_hovaten IS NOT NULL OR p_sdt IS NOT NULL THEN
+        MERGE INTO NGUOIDUNG n
+        USING (SELECT p_matk AS MATK FROM DUAL) t
+        ON (n.MATK = t.MATK)
+        WHEN MATCHED THEN
+            UPDATE SET 
+                EMAIL = NVL(p_email, n.EMAIL),
+                HOVATEN = NVL(p_hovaten, n.HOVATEN),
+                SDT = NVL(p_sdt, n.SDT)
+        WHEN NOT MATCHED THEN
+            INSERT (MATK, EMAIL, HOVATEN, SDT)
+            VALUES (p_matk, p_email, p_hovaten, p_sdt);
+    END IF;
+    
+    IF p_clearance IS NOT NULL OR p_mavaitro IS NOT NULL THEN
+        UPDATE TAIKHOAN 
+        SET CLEARANCELEVEL = NVL(p_clearance, CLEARANCELEVEL),
+            MAVAITRO = NVL(p_mavaitro, MAVAITRO)
+        WHERE MATK = p_matk;
+    END IF;
+    
+    INSERT INTO AUDIT_LOGS(MATK, ACTION, TARGET, SECURITYLABEL)
+    VALUES('ADMIN', 'UPDATE_USER', p_matk, 0);
+    
+    COMMIT;
+END;
+/
+
+-- Thêm cột encryption cho ATTACHMENT
+BEGIN
+    EXECUTE IMMEDIATE 'ALTER TABLE ATTACHMENT ADD (ENCRYPTION_KEY VARCHAR2(500), ENCRYPTION_IV VARCHAR2(100))';
+EXCEPTION
+    WHEN OTHERS THEN
+        IF SQLCODE = -1430 THEN NULL;
+        ELSE RAISE;
+        END IF;
+END;
+/
+
+-- Upload attachment với mã hóa
+CREATE OR REPLACE PROCEDURE SP_UPLOAD_ATTACHMENT_ENCRYPTED(
+    p_matk VARCHAR2,
+    p_filename VARCHAR2,
+    p_mimetype VARCHAR2,
+    p_filesize NUMBER,
+    p_filedata BLOB,
+    p_encryption_key VARCHAR2,
+    p_encryption_iv VARCHAR2,
+    p_attach_id OUT NUMBER
+) AS
+BEGIN
+    INSERT INTO ATTACHMENT(MATK, FILENAME, MIMETYPE, FILESIZE, FILEDATA, ENCRYPTION_KEY, ENCRYPTION_IV, IS_ENCRYPTED)
+    VALUES(p_matk, p_filename, p_mimetype, p_filesize, p_filedata, p_encryption_key, p_encryption_iv, 1)
+    RETURNING ATTACH_ID INTO p_attach_id;
+    
+    INSERT INTO AUDIT_LOGS(MATK, ACTION, TARGET, SECURITYLABEL)
+    VALUES(p_matk, 'UPLOAD_ENCRYPTED_ATTACHMENT', p_filename, 0);
+    
+    COMMIT;
+END;
+/
+
+-- Tạo OTP
+CREATE OR REPLACE PROCEDURE SP_TAO_OTP(
+    p_matk VARCHAR2,
+    p_email VARCHAR2,
+    p_otp_hash VARCHAR2,
+    p_expiry_minutes NUMBER DEFAULT 10,
+    p_maotp OUT NUMBER
+) AS
+BEGIN
+    INSERT INTO XACTHUCOTP (MATK, EMAIL, MAXTOTP, THOIGIANTONTAI)
+    VALUES (p_matk, p_email, p_otp_hash, SYSTIMESTAMP + NUMTODSINTERVAL(p_expiry_minutes, 'MINUTE'))
+    RETURNING MAOTP INTO p_maotp;
+    COMMIT;
+END;
+/
+
+-- Xóa tin nhắn (Admin)
+CREATE OR REPLACE PROCEDURE SP_XOA_TINNHAN(p_matn NUMBER) AS
+BEGIN
+  DELETE FROM TINNHAN WHERE MATN = p_matn;
+  INSERT INTO AUDIT_LOGS(MATK, ACTION, TARGET, SECURITYLABEL)
+  VALUES('ADMIN', 'DELETE_MESSAGE', TO_CHAR(p_matn), 0);
   COMMIT;
 END;
 /

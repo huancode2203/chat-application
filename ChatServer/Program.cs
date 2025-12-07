@@ -95,7 +95,7 @@ namespace ChatServer
             var serverTask = socketServer.StartAsync(cts.Token);
 
             // Initialize WinForms for admin panel
-            Application.SetHighDpiMode(HighDpiMode.SystemAware);
+            Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 

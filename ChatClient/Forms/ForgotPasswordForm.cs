@@ -22,7 +22,11 @@ namespace ChatClient.Forms
         private void SetupEventHandlers()
         {
             btnSubmit.Click += async (_, _) => await BtnSubmit_Click();
-            btnCancel.Click += (_, _) => Close();
+            btnCancel.Click += (_, _) =>
+            {
+                DialogResult = DialogResult.Cancel;
+                Close();
+            };
         }
 
         private async Task BtnSubmit_Click()

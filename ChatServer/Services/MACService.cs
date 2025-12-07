@@ -3,24 +3,26 @@ using System;
 namespace ChatServer.Services
 {
     /// <summary>
-    /// MAC (Mandatory Access Control) theo mô hình đơn giản kiểu Bell-LaPadula:
-    /// - No read up: user chỉ được đọc đối tượng có nhãn <= clearance của mình.
-    /// - No write down: user không được ghi (tạo tin nhắn/file) xuống mức nhãn thấp hơn clearance.
+    /// MAC (Mandatory Access Control) - Cải tiến cho enterprise chat:
+    /// - No read up: User chỉ đọc được tin nhắn có label <= clearance.
+    /// - Write flexibility: User có thể gửi tin với label <= clearance (linh hoạt hơn).
     /// 
-    /// ClearanceLevel / SecurityLabel là số nguyên: 1=LOW, 2=MEDIUM, 3=HIGH.
+    /// Ví dụ: User clearance 3 có thể gửi tin với label 1, 2, hoặc 3.
+    /// ClearanceLevel / SecurityLabel: 1=LOW, 2=MEDIUM, 3=HIGH, 4=TOP SECRET, 5=CLASSIFIED
     /// </summary>
     public class MACService
     {
         public bool CanRead(int userClearanceLevel, int objectSecurityLabel)
         {
-            // No read up: chỉ đọc được object có label <= clearance.
+            // No read up: chỉ đọc được object có label <= clearance
             return objectSecurityLabel <= userClearanceLevel;
         }
 
         public bool CanWrite(int userClearanceLevel, int objectSecurityLabel)
         {
-            // No write down: chỉ ghi được tới label >= clearance.
-            return objectSecurityLabel >= userClearanceLevel;
+            // Cho phép ghi với label <= clearance (user cao có thể gửi tin thấp)
+            // Ví dụ: User level 3 có thể gửi message level 1, 2, 3
+            return objectSecurityLabel <= userClearanceLevel;
         }
     }
 }

@@ -19,6 +19,10 @@
     <EmbeddedResource Remove="Forms\ChatForm.Attachments.resx" />
     <None Include="Forms\ChatForm.Attachments.resx" />
   </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Remove="Forms\ChatForm.Features.resx" />
+    <None Include="Forms\ChatForm.Features.resx" />
+  </ItemGroup>
 </Project>
 
 

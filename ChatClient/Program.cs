@@ -12,9 +12,13 @@ namespace ChatClient
         [STAThread]
         private static void Main()
         {
-            Application.SetHighDpiMode(HighDpiMode.SystemAware);
+            // PerMonitorV2 ensures consistent DPI scaling across different monitors
+            Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
+
+            // Set default font for consistency across all forms
+            Application.SetDefaultFont(new System.Drawing.Font("Segoe UI", 9F));
 
             Application.Run(new LoginForm());
         }

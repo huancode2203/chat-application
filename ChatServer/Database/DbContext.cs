@@ -106,13 +106,12 @@ namespace ChatServer.Database
         public async Task WriteAuditLogAsync(string matk, string action, string target, int securityLabel)
         {
             using var cmd = Connection.CreateCommand();
-            cmd.CommandText = @"
-                INSERT INTO AUDIT_LOGS (MATK, ACTION, TARGET, SECURITYLABEL)
-                VALUES (:p_matk, :p_action, :p_target, :p_label)";
+            cmd.CommandText = "BEGIN SP_WRITE_AUDIT_LOG(:p_matk, :p_action, :p_target, :p_securitylabel); END;";
+            cmd.CommandType = CommandType.Text;
             cmd.Parameters.Add(new OracleParameter("p_matk", OracleDbType.Varchar2) { Value = matk });
             cmd.Parameters.Add(new OracleParameter("p_action", OracleDbType.Varchar2) { Value = action });
             cmd.Parameters.Add(new OracleParameter("p_target", OracleDbType.Varchar2) { Value = target });
-            cmd.Parameters.Add(new OracleParameter("p_label", OracleDbType.Int32) { Value = securityLabel });
+            cmd.Parameters.Add(new OracleParameter("p_securitylabel", OracleDbType.Decimal) { Value = securityLabel });
             await cmd.ExecuteNonQueryAsync();
         }
 
@@ -146,18 +145,15 @@ namespace ChatServer.Database
         public async Task<int> CreateOtpAsync(string matk, string email, string otpHash, int expiryMinutes = 10)
         {
             using var cmd = Connection.CreateCommand();
-            cmd.CommandText = @"
-                INSERT INTO XACTHUCOTP (MATK, EMAIL, MAXTOTP, THOIGIANTONTAI)
-                VALUES (:p_matk, :p_email, :p_otp_hash, SYSTIMESTAMP + NUMTODSINTERVAL(:p_expiry, 'MINUTE'))
-                RETURNING MAOTP INTO :p_out_maotp";
+            cmd.CommandText = "BEGIN SP_TAO_OTP(:p_matk, :p_email, :p_otp_hash, :p_expiry, :p_maotp); END;";
+            cmd.CommandType = CommandType.Text;
             cmd.Parameters.Add(new OracleParameter("p_matk", OracleDbType.Varchar2) { Value = matk });
             cmd.Parameters.Add(new OracleParameter("p_email", OracleDbType.Varchar2) { Value = email });
             cmd.Parameters.Add(new OracleParameter("p_otp_hash", OracleDbType.Varchar2) { Value = otpHash });
-            cmd.Parameters.Add(new OracleParameter("p_expiry", OracleDbType.Int32) { Value = expiryMinutes });
-            var outParam = new OracleParameter("p_out_maotp", OracleDbType.Int32) { Direction = ParameterDirection.Output };
+            cmd.Parameters.Add(new OracleParameter("p_expiry", OracleDbType.Decimal) { Value = expiryMinutes });
+            var outParam = new OracleParameter("p_maotp", OracleDbType.Decimal) { Direction = ParameterDirection.Output };
             cmd.Parameters.Add(outParam);
             await cmd.ExecuteNonQueryAsync();
-            // Oracle trả về OracleDecimal, cần chuyển đúng kiểu
             if (outParam.Value is OracleDecimal oracleDecimal)
             {
                 return oracleDecimal.ToInt32();
@@ -481,25 +477,37 @@ namespace ChatServer.Database
 
         // ========== ATTACHMENT METHODS ==========
 
-        public async Task<int> UploadAttachmentAsync(string matk, string fileName, string mimeType, long fileSize, byte[] data)
+        public async Task<int> UploadAttachmentAsync(string matk, string fileName, string mimeType, long fileSize, byte[] data, int isEncrypted = 0)
         {
             using var cmd = Connection.CreateCommand();
-            cmd.CommandText = "BEGIN SP_UPLOAD_ATTACHMENT(:p_matk, :p_filename, :p_mimetype, :p_filesize, :p_filedata, :p_attach_id); END;";
+            cmd.CommandText = "BEGIN SP_UPLOAD_ATTACHMENT(:p_matk, :p_filename, :p_mimetype, :p_filesize, :p_filedata, :p_attach_id, :p_is_encrypted); END;";
             cmd.CommandType = CommandType.Text;
             cmd.Parameters.Add(new OracleParameter("p_matk", OracleDbType.Varchar2) { Value = matk });
             cmd.Parameters.Add(new OracleParameter("p_filename", OracleDbType.Varchar2) { Value = fileName });
             cmd.Parameters.Add(new OracleParameter("p_mimetype", OracleDbType.Varchar2) { Value = mimeType });
-            cmd.Parameters.Add(new OracleParameter("p_filesize", OracleDbType.Int64) { Value = fileSize });
+            cmd.Parameters.Add(new OracleParameter("p_filesize", OracleDbType.Decimal) { Value = fileSize });
             cmd.Parameters.Add(new OracleParameter("p_filedata", OracleDbType.Blob) { Value = data });
-            var outParam = new OracleParameter("p_attach_id", OracleDbType.Int32) { Direction = ParameterDirection.Output };
+            
+            // Add output parameter BEFORE p_is_encrypted to match SP signature
+            var outParam = new OracleParameter("p_attach_id", OracleDbType.Decimal) { Direction = ParameterDirection.Output };
             cmd.Parameters.Add(outParam);
+            cmd.Parameters.Add(new OracleParameter("p_is_encrypted", OracleDbType.Decimal) { Value = isEncrypted });
+            
             await cmd.ExecuteNonQueryAsync();
+            
+            // Handle output - check for DBNull
+            if (outParam.Value == null || outParam.Value == DBNull.Value)
+            {
+                throw new Exception("Failed to get attachment ID from database");
+            }
+            
             if (outParam.Value is OracleDecimal attachDec)
             {
                 return attachDec.ToInt32();
             }
             return Convert.ToInt32(outParam.Value);
         }
+
 
         public async Task<int> SendMessageWithAttachmentAsync(string mactc, string matk, string content, int securityLabel, int attachmentId)
         {
@@ -524,13 +532,17 @@ namespace ChatServer.Database
         public async Task<(int AttachmentId, string FileName, string MimeType, long FileSize, byte[] Data)?> GetAttachmentByMessageIdAsync(int matn)
         {
             using var cmd = Connection.CreateCommand();
+            // Lấy attachment với thông tin encryption
             cmd.CommandText = @"
-                SELECT a.ATTACH_ID, a.FILENAME, a.MIMETYPE, a.FILESIZE, a.FILEDATA
+                SELECT a.ATTACH_ID, a.FILENAME, a.MIMETYPE, a.FILESIZE, a.FILEDATA,
+                       NVL(a.ENCRYPTION_KEY, '') AS ENCRYPTION_KEY, 
+                       NVL(a.ENCRYPTION_IV, '') AS ENCRYPTION_IV,
+                       NVL(a.IS_ENCRYPTED, 0) AS IS_ENCRYPTED
                 FROM TINNHAN_ATTACH ta
                 JOIN ATTACHMENT a ON ta.ATTACH_ID = a.ATTACH_ID
                 WHERE ta.MATN = :p_matn";
             cmd.CommandType = CommandType.Text;
-            cmd.Parameters.Add(new OracleParameter("p_matn", OracleDbType.Int32) { Value = matn });
+            cmd.Parameters.Add(new OracleParameter("p_matn", OracleDbType.Decimal) { Value = matn });
 
             using var reader = await cmd.ExecuteReaderAsync(CommandBehavior.SequentialAccess);
             if (!await reader.ReadAsync())
@@ -543,32 +555,66 @@ namespace ChatServer.Database
             var mimeType = reader.IsDBNull(2) ? "application/octet-stream" : reader.GetString(2);
             var fileSize = reader.IsDBNull(3) ? 0L : reader.GetInt64(3);
 
-            byte[] data;
-            if (reader.IsDBNull(4) || fileSize <= 0)
+            // Đọc encrypted data trước
+            byte[] encryptedData;
+            if (reader.IsDBNull(4))
             {
-                data = Array.Empty<byte>();
+                encryptedData = Array.Empty<byte>();
             }
             else
             {
-                var length = (int)Math.Min(fileSize, int.MaxValue);
-                data = new byte[length];
+                // Đọc toàn bộ BLOB
+                using var blobStream = reader.GetStream(4);
+                using var ms = new System.IO.MemoryStream();
+                blobStream.CopyTo(ms);
+                encryptedData = ms.ToArray();
+            }
 
-                long bytesReadTotal = 0;
-                var bufferOffset = 0;
-                const int bufferSize = 8192;
-
-                while (bytesReadTotal < length)
+            // Lấy encryption info (cần đọc theo thứ tự sau khi đọc BLOB)
+            var encryptionKey = "";
+            var encryptionIv = "";
+            var isEncrypted = 0;
+            
+            try
+            {
+                // Đọc lại để lấy encryption info
+                cmd.Parameters.Clear();
+                cmd.CommandText = @"
+                    SELECT NVL(a.ENCRYPTION_KEY, ''), NVL(a.ENCRYPTION_IV, ''), NVL(a.IS_ENCRYPTED, 0)
+                    FROM TINNHAN_ATTACH ta
+                    JOIN ATTACHMENT a ON ta.ATTACH_ID = a.ATTACH_ID
+                    WHERE ta.MATN = :p_matn";
+                cmd.Parameters.Add(new OracleParameter("p_matn", OracleDbType.Decimal) { Value = matn });
+                
+                using var reader2 = await cmd.ExecuteReaderAsync();
+                if (await reader2.ReadAsync())
                 {
-                    var bytesToRead = (int)Math.Min(bufferSize, length - bytesReadTotal);
-                    var bytesRead = (int)reader.GetBytes(4, bytesReadTotal, data, bufferOffset, bytesToRead);
-                    if (bytesRead <= 0)
-                    {
-                        break;
-                    }
-
-                    bytesReadTotal += bytesRead;
-                    bufferOffset += bytesRead;
+                    encryptionKey = reader2.IsDBNull(0) ? "" : reader2.GetString(0);
+                    encryptionIv = reader2.IsDBNull(1) ? "" : reader2.GetString(1);
+                    isEncrypted = reader2.IsDBNull(2) ? 0 : reader2.GetInt32(2);
                 }
+            }
+            catch { /* Ignore if columns don't exist */ }
+
+            // Decrypt nếu cần
+            byte[] data;
+            if (isEncrypted == 1 && encryptedData.Length > 0)
+            {
+                try
+                {
+                    // Hybrid decrypt: giải mã package (data|key|iv)
+                    var encryptedPackage = System.Text.Encoding.ASCII.GetString(encryptedData);
+                    data = Utils.EncryptionHelper.HybridDecrypt(encryptedPackage);
+                }
+                catch
+                {
+                    // Nếu decrypt lỗi, trả về data gốc
+                    data = encryptedData;
+                }
+            }
+            else
+            {
+                data = encryptedData;
             }
 
             return (attachmentId, fileName, mimeType, fileSize, data);
@@ -880,7 +926,7 @@ namespace ChatServer.Database
             return result;
         }
 
-        public async Task<AdminUserInfo?> GetUserDetailsAsync(string matk)
+        public async Task<AdminUserInfo?> GetUserDetailsAsync(string matkOrUsername)
         {
             using var cmd = Connection.CreateCommand();
             cmd.CommandText = @"
@@ -891,8 +937,8 @@ namespace ChatServer.Database
                        CASE WHEN EXISTS (SELECT 1 FROM XACTHUCOTP x WHERE x.MATK = tk.MATK AND x.DAXACMINH = 1) THEN 1 ELSE 0 END AS IS_OTP_VERIFIED
                 FROM TAIKHOAN tk
                 LEFT JOIN NGUOIDUNG n ON tk.MATK = n.MATK
-                WHERE tk.MATK = :p_matk";
-            cmd.Parameters.Add(new OracleParameter("p_matk", OracleDbType.Varchar2) { Value = matk });
+                WHERE tk.MATK = :p_value OR tk.TENTK = :p_value";
+            cmd.Parameters.Add(new OracleParameter("p_value", OracleDbType.Varchar2) { Value = matkOrUsername });
             
             using var reader = await cmd.ExecuteReaderAsync();
             if (!await reader.ReadAsync())
@@ -913,91 +959,32 @@ namespace ChatServer.Database
             };
         }
 
-        public async Task UpdateUserInfoAsync(string matk, string? email, string? hovaten, string? phone, int? clearanceLevel, string? mavaitro)
+        public async Task UpdateUserInfoAsync(string matkOrUsername, string? email, string? hovaten, string? phone, int? clearanceLevel, string? mavaitro)
         {
+            // Resolve MATK from username if needed
+            var matk = await ResolveToMatkAsync(matkOrUsername);
+            
             using var cmd = Connection.CreateCommand();
-            var updates = new List<string>();
-            var parameters = new List<OracleParameter> { new OracleParameter("p_matk", OracleDbType.Varchar2) { Value = matk } };
-
-            if (email != null)
-            {
-                updates.Add("EMAIL = :p_email");
-                parameters.Add(new OracleParameter("p_email", OracleDbType.Varchar2) { Value = email });
-            }
-            if (hovaten != null)
-            {
-                updates.Add("HOVATEN = :p_hovaten");
-                parameters.Add(new OracleParameter("p_hovaten", OracleDbType.Varchar2) { Value = hovaten });
-            }
-            if (phone != null)
-            {
-                updates.Add("SDT = :p_phone");
-                parameters.Add(new OracleParameter("p_phone", OracleDbType.Varchar2) { Value = phone });
-            }
-            if (clearanceLevel.HasValue)
-            {
-                updates.Add("CLEARANCELEVEL = :p_clearance");
-                parameters.Add(new OracleParameter("p_clearance", OracleDbType.Int32) { Value = clearanceLevel.Value });
-            }
-            if (mavaitro != null)
-            {
-                updates.Add("MAVAITRO = :p_mavaitro");
-                parameters.Add(new OracleParameter("p_mavaitro", OracleDbType.Varchar2) { Value = (object?)mavaitro ?? DBNull.Value });
-            }
-
-            if (updates.Count == 0) return;
-
-            // Update NGUOIDUNG
-            if (email != null || hovaten != null || phone != null)
-            {
-                var userUpdates = new List<string>();
-                if (email != null) userUpdates.Add("EMAIL = :p_email");
-                if (hovaten != null) userUpdates.Add("HOVATEN = :p_hovaten");
-                if (phone != null) userUpdates.Add("SDT = :p_phone");
-
-                cmd.CommandText = $@"
-                    MERGE INTO NGUOIDUNG n
-                    USING (SELECT :p_matk AS MATK FROM DUAL) t
-                    ON (n.MATK = t.MATK)
-                    WHEN MATCHED THEN
-                        UPDATE SET {string.Join(", ", userUpdates)}
-                    WHEN NOT MATCHED THEN
-                        INSERT (MATK, EMAIL, HOVATEN, SDT)
-                        VALUES (:p_matk, :p_email, :p_hovaten, :p_phone)";
-                cmd.Parameters.Clear();
-                cmd.Parameters.Add(new OracleParameter("p_matk", OracleDbType.Varchar2) { Value = matk });
-                if (email != null) cmd.Parameters.Add(new OracleParameter("p_email", OracleDbType.Varchar2) { Value = email });
-                if (hovaten != null) cmd.Parameters.Add(new OracleParameter("p_hovaten", OracleDbType.Varchar2) { Value = hovaten });
-                if (phone != null) cmd.Parameters.Add(new OracleParameter("p_phone", OracleDbType.Varchar2) { Value = phone });
-                await cmd.ExecuteNonQueryAsync();
-            }
-
-            // Update TAIKHOAN
-            if (clearanceLevel.HasValue || mavaitro != null)
-            {
-                var accountUpdates = new List<string>();
-                cmd.Parameters.Clear();
-                cmd.Parameters.Add(new OracleParameter("p_matk", OracleDbType.Varchar2) { Value = matk });
-                if (clearanceLevel.HasValue)
-                {
-                    accountUpdates.Add("CLEARANCELEVEL = :p_clearance");
-                    cmd.Parameters.Add(new OracleParameter("p_clearance", OracleDbType.Int32) { Value = clearanceLevel.Value });
-                }
-                if (mavaitro != null)
-                {
-                    accountUpdates.Add("MAVAITRO = :p_mavaitro");
-                    cmd.Parameters.Add(new OracleParameter("p_mavaitro", OracleDbType.Varchar2) { Value = (object?)mavaitro ?? DBNull.Value });
-                }
-
-                cmd.CommandText = $"UPDATE TAIKHOAN SET {string.Join(", ", accountUpdates)} WHERE MATK = :p_matk";
-                await cmd.ExecuteNonQueryAsync();
-            }
+            // Sử dụng stored procedure SP_CAPNHAT_NGUOIDUNG_ADMIN
+            cmd.CommandText = "BEGIN SP_CAPNHAT_NGUOIDUNG_ADMIN(:p_matk, :p_email, :p_hovaten, :p_sdt, :p_clearance, :p_mavaitro); END;";
+            cmd.CommandType = CommandType.Text;
+            
+            cmd.Parameters.Add(new OracleParameter("p_matk", OracleDbType.Varchar2) { Value = matk });
+            cmd.Parameters.Add(new OracleParameter("p_email", OracleDbType.Varchar2) { Value = (object?)email ?? DBNull.Value });
+            cmd.Parameters.Add(new OracleParameter("p_hovaten", OracleDbType.Varchar2) { Value = (object?)hovaten ?? DBNull.Value });
+            cmd.Parameters.Add(new OracleParameter("p_sdt", OracleDbType.Varchar2) { Value = (object?)phone ?? DBNull.Value });
+            // Dùng OracleDbType.Decimal cho NUMBER
+            cmd.Parameters.Add(new OracleParameter("p_clearance", OracleDbType.Decimal) { Value = clearanceLevel.HasValue ? (object)clearanceLevel.Value : DBNull.Value });
+            cmd.Parameters.Add(new OracleParameter("p_mavaitro", OracleDbType.Varchar2) { Value = (object?)mavaitro ?? DBNull.Value });
+            
+            await cmd.ExecuteNonQueryAsync();
         }
 
         public async Task BanUserGlobalAsync(string matk)
         {
             using var cmd = Connection.CreateCommand();
-            cmd.CommandText = "UPDATE TAIKHOAN SET IS_BANNED_GLOBAL = 1 WHERE MATK = :p_matk";
+            cmd.CommandText = "BEGIN SP_BAN_USER_GLOBAL(:p_matk); END;";
+            cmd.CommandType = CommandType.Text;
             cmd.Parameters.Add(new OracleParameter("p_matk", OracleDbType.Varchar2) { Value = matk });
             await cmd.ExecuteNonQueryAsync();
         }
@@ -1005,7 +992,8 @@ namespace ChatServer.Database
         public async Task UnbanUserGlobalAsync(string matk)
         {
             using var cmd = Connection.CreateCommand();
-            cmd.CommandText = "UPDATE TAIKHOAN SET IS_BANNED_GLOBAL = 0 WHERE MATK = :p_matk";
+            cmd.CommandText = "BEGIN SP_UNBAN_USER_GLOBAL(:p_matk); END;";
+            cmd.CommandType = CommandType.Text;
             cmd.Parameters.Add(new OracleParameter("p_matk", OracleDbType.Varchar2) { Value = matk });
             await cmd.ExecuteNonQueryAsync();
         }
@@ -1027,13 +1015,13 @@ namespace ChatServer.Database
                 result.Add(new AdminConversationInfo
                 {
                     Mactc = reader.GetString(0),
-                    Tenctc = reader.GetString(1),
-                    Maloaictc = reader.GetString(2),
-                    IsPrivate = reader.GetString(3) == "Y",
-                    Nguoiql = reader.GetString(4),
+                    Tenctc = reader.IsDBNull(1) ? "" : reader.GetString(1),
+                    Maloaictc = reader.IsDBNull(2) ? "" : reader.GetString(2),
+                    IsPrivate = !reader.IsDBNull(3) && reader.GetString(3) == "Y",
+                    Nguoiql = reader.IsDBNull(4) ? "N/A" : reader.GetString(4),
                     NgayTao = reader.GetDateTime(5),
-                    MemberCount = reader.GetInt32(6),
-                    MessageCount = reader.GetInt32(7)
+                    MemberCount = reader.IsDBNull(6) ? 0 : reader.GetInt32(6),
+                    MessageCount = reader.IsDBNull(7) ? 0 : reader.GetInt32(7)
                 });
             }
             return result;
@@ -1101,8 +1089,9 @@ namespace ChatServer.Database
         public async Task DeleteMessageAsync(int matn)
         {
             using var cmd = Connection.CreateCommand();
-            cmd.CommandText = "DELETE FROM TINNHAN WHERE MATN = :p_matn";
-            cmd.Parameters.Add(new OracleParameter("p_matn", OracleDbType.Int32) { Value = matn });
+            cmd.CommandText = "BEGIN SP_XOA_TINNHAN(:p_matn); END;";
+            cmd.CommandType = CommandType.Text;
+            cmd.Parameters.Add(new OracleParameter("p_matn", OracleDbType.Decimal) { Value = matn });
             await cmd.ExecuteNonQueryAsync();
         }
 

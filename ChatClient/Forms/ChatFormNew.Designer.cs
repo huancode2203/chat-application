@@ -17,402 +17,418 @@ namespace ChatClient.Forms
 
         private void InitializeComponent()
         {
-            this.splitContainer = new System.Windows.Forms.SplitContainer();
-            this.pnlConvButtons = new System.Windows.Forms.Panel();
-            this.btnLogout = new System.Windows.Forms.Button();
-            this.btnProfile = new System.Windows.Forms.Button();
-            this.btnRefresh = new System.Windows.Forms.Button();
-            this.btnViewMembers = new System.Windows.Forms.Button();
-            this.btnPrivateChat = new System.Windows.Forms.Button();
-            this.btnCreateGroup = new System.Windows.Forms.Button();
-            this.lstConversations = new System.Windows.Forms.ListView();
-            this.colName = new System.Windows.Forms.ColumnHeader();
-            this.colMembers = new System.Windows.Forms.ColumnHeader();
-            this.colType = new System.Windows.Forms.ColumnHeader();
-            this.pnlChatArea = new System.Windows.Forms.Panel();
-            this.pnlMessages = new System.Windows.Forms.Panel();
-            this.pnlInput = new System.Windows.Forms.Panel();
-            this.btnSend = new System.Windows.Forms.Button();
-            this.btnAttachment = new System.Windows.Forms.Button();
-            this.cbSecurityLabel = new System.Windows.Forms.ComboBox();
-            this.txtMessage = new System.Windows.Forms.TextBox();
-            this.pnlReply = new System.Windows.Forms.Panel();
-            this.btnCancelReply = new System.Windows.Forms.Button();
-            this.lblReplyTo = new System.Windows.Forms.Label();
-            this.lblChatTitle = new System.Windows.Forms.Label();
-            this.statusStrip = new System.Windows.Forms.StatusStrip();
-            this.lblStatus = new System.Windows.Forms.ToolStripStatusLabel();
-            ((System.ComponentModel.ISupportInitialize)(this.splitContainer)).BeginInit();
-            this.splitContainer.Panel1.SuspendLayout();
-            this.splitContainer.Panel2.SuspendLayout();
-            this.splitContainer.SuspendLayout();
-            this.pnlConvButtons.SuspendLayout();
-            this.pnlChatArea.SuspendLayout();
-            this.pnlInput.SuspendLayout();
-            this.pnlReply.SuspendLayout();
-            this.statusStrip.SuspendLayout();
-            this.SuspendLayout();
+            splitContainer = new SplitContainer();
+            lstConversations = new ListView();
+            colName = new ColumnHeader();
+            colMembers = new ColumnHeader();
+            colType = new ColumnHeader();
+            pnlConvButtons = new Panel();
+            btnCreateGroup = new Button();
+            btnPrivateChat = new Button();
+            btnViewMembers = new Button();
+            btnRefresh = new Button();
+            btnProfile = new Button();
+            btnLogout = new Button();
+            pnlChatArea = new Panel();
+            pnlInput = new Panel();
+            pnlReply = new Panel();
+            lblReplyTo = new Label();
+            btnCancelReply = new Button();
+            txtMessage = new TextBox();
+            cbSecurityLabel = new ComboBox();
+            btnAttachment = new Button();
+            btnSend = new Button();
+            pnlMessages = new Panel();
+            lblChatTitle = new Label();
+            statusStrip = new StatusStrip();
+            lblStatus = new ToolStripStatusLabel();
+            ((System.ComponentModel.ISupportInitialize)splitContainer).BeginInit();
+            splitContainer.Panel1.SuspendLayout();
+            splitContainer.Panel2.SuspendLayout();
+            splitContainer.SuspendLayout();
+            pnlConvButtons.SuspendLayout();
+            pnlChatArea.SuspendLayout();
+            pnlInput.SuspendLayout();
+            pnlReply.SuspendLayout();
+            statusStrip.SuspendLayout();
+            SuspendLayout();
             // 
             // splitContainer
             // 
-            this.splitContainer.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.splitContainer.FixedPanel = System.Windows.Forms.FixedPanel.Panel1;
-            this.splitContainer.Location = new System.Drawing.Point(0, 0);
-            this.splitContainer.Name = "splitContainer";
+            splitContainer.Dock = DockStyle.Fill;
+            splitContainer.FixedPanel = FixedPanel.Panel1;
+            splitContainer.Location = new Point(0, 0);
+            splitContainer.Margin = new Padding(4, 4, 4, 4);
+            splitContainer.Name = "splitContainer";
             // 
-            // splitContainer.Panel1 - Conversations List
+            // splitContainer.Panel1
             // 
-            this.splitContainer.Panel1.BackColor = System.Drawing.Color.FromArgb(248, 249, 250);
-            this.splitContainer.Panel1.Controls.Add(this.lstConversations);
-            this.splitContainer.Panel1.Controls.Add(this.pnlConvButtons);
-            this.splitContainer.Panel1MinSize = 250;
+            splitContainer.Panel1.BackColor = Color.FromArgb(248, 249, 250);
+            splitContainer.Panel1.Controls.Add(lstConversations);
+            splitContainer.Panel1.Controls.Add(pnlConvButtons);
+            splitContainer.Panel1MinSize = 250;
             // 
-            // splitContainer.Panel2 - Chat Area
+            // splitContainer.Panel2
             // 
-            this.splitContainer.Panel2.Controls.Add(this.pnlChatArea);
-            this.splitContainer.Size = new System.Drawing.Size(1100, 678);
-            this.splitContainer.SplitterDistance = 280;
-            this.splitContainer.TabIndex = 0;
-            // 
-            // pnlConvButtons - reverse order for correct Dock.Top stacking
-            // 
-            this.pnlConvButtons.BackColor = System.Drawing.Color.FromArgb(240, 242, 245);
-            this.pnlConvButtons.Controls.Add(this.btnCreateGroup);
-            this.pnlConvButtons.Controls.Add(this.btnPrivateChat);
-            this.pnlConvButtons.Controls.Add(this.btnViewMembers);
-            this.pnlConvButtons.Controls.Add(this.btnRefresh);
-            this.pnlConvButtons.Controls.Add(this.btnProfile);
-            this.pnlConvButtons.Controls.Add(this.btnLogout);
-            this.pnlConvButtons.Dock = System.Windows.Forms.DockStyle.Bottom;
-            this.pnlConvButtons.Location = new System.Drawing.Point(0, 448);
-            this.pnlConvButtons.Name = "pnlConvButtons";
-            this.pnlConvButtons.Padding = new System.Windows.Forms.Padding(8);
-            this.pnlConvButtons.Size = new System.Drawing.Size(280, 230);
-            this.pnlConvButtons.TabIndex = 1;
-            // 
-            // btnCreateGroup
-            // 
-            this.btnCreateGroup.BackColor = System.Drawing.Color.FromArgb(0, 132, 255);
-            this.btnCreateGroup.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.btnCreateGroup.Dock = System.Windows.Forms.DockStyle.Top;
-            this.btnCreateGroup.FlatAppearance.BorderSize = 0;
-            this.btnCreateGroup.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnCreateGroup.Font = new System.Drawing.Font("Segoe UI", 9.5F);
-            this.btnCreateGroup.ForeColor = System.Drawing.Color.White;
-            this.btnCreateGroup.Location = new System.Drawing.Point(8, 8);
-            this.btnCreateGroup.Name = "btnCreateGroup";
-            this.btnCreateGroup.Size = new System.Drawing.Size(264, 34);
-            this.btnCreateGroup.TabIndex = 0;
-            this.btnCreateGroup.Text = "➕ Tạo nhóm mới";
-            this.btnCreateGroup.UseVisualStyleBackColor = false;
-            // 
-            // btnPrivateChat
-            // 
-            this.btnPrivateChat.BackColor = System.Drawing.Color.FromArgb(40, 167, 69);
-            this.btnPrivateChat.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.btnPrivateChat.Dock = System.Windows.Forms.DockStyle.Top;
-            this.btnPrivateChat.FlatAppearance.BorderSize = 0;
-            this.btnPrivateChat.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnPrivateChat.Font = new System.Drawing.Font("Segoe UI", 9.5F);
-            this.btnPrivateChat.ForeColor = System.Drawing.Color.White;
-            this.btnPrivateChat.Location = new System.Drawing.Point(8, 42);
-            this.btnPrivateChat.Name = "btnPrivateChat";
-            this.btnPrivateChat.Size = new System.Drawing.Size(264, 34);
-            this.btnPrivateChat.TabIndex = 1;
-            this.btnPrivateChat.Text = "💬 Chat riêng";
-            this.btnPrivateChat.UseVisualStyleBackColor = false;
-            // 
-            // btnViewMembers
-            // 
-            this.btnViewMembers.BackColor = System.Drawing.Color.FromArgb(108, 117, 125);
-            this.btnViewMembers.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.btnViewMembers.Dock = System.Windows.Forms.DockStyle.Top;
-            this.btnViewMembers.FlatAppearance.BorderSize = 0;
-            this.btnViewMembers.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnViewMembers.Font = new System.Drawing.Font("Segoe UI", 9.5F);
-            this.btnViewMembers.ForeColor = System.Drawing.Color.White;
-            this.btnViewMembers.Location = new System.Drawing.Point(8, 76);
-            this.btnViewMembers.Name = "btnViewMembers";
-            this.btnViewMembers.Size = new System.Drawing.Size(264, 34);
-            this.btnViewMembers.TabIndex = 2;
-            this.btnViewMembers.Text = "👥 Xem thành viên";
-            this.btnViewMembers.UseVisualStyleBackColor = false;
-            // 
-            // btnRefresh
-            // 
-            this.btnRefresh.BackColor = System.Drawing.Color.FromArgb(255, 193, 7);
-            this.btnRefresh.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.btnRefresh.Dock = System.Windows.Forms.DockStyle.Top;
-            this.btnRefresh.FlatAppearance.BorderSize = 0;
-            this.btnRefresh.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnRefresh.Font = new System.Drawing.Font("Segoe UI", 9.5F);
-            this.btnRefresh.ForeColor = System.Drawing.Color.Black;
-            this.btnRefresh.Location = new System.Drawing.Point(8, 110);
-            this.btnRefresh.Name = "btnRefresh";
-            this.btnRefresh.Size = new System.Drawing.Size(264, 34);
-            this.btnRefresh.TabIndex = 3;
-            this.btnRefresh.Text = "🔄 Làm mới";
-            this.btnRefresh.UseVisualStyleBackColor = false;
-            // 
-            // btnProfile
-            // 
-            this.btnProfile.BackColor = System.Drawing.Color.FromArgb(23, 162, 184);
-            this.btnProfile.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.btnProfile.Dock = System.Windows.Forms.DockStyle.Top;
-            this.btnProfile.FlatAppearance.BorderSize = 0;
-            this.btnProfile.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnProfile.Font = new System.Drawing.Font("Segoe UI", 9.5F);
-            this.btnProfile.ForeColor = System.Drawing.Color.White;
-            this.btnProfile.Location = new System.Drawing.Point(8, 144);
-            this.btnProfile.Name = "btnProfile";
-            this.btnProfile.Size = new System.Drawing.Size(264, 34);
-            this.btnProfile.TabIndex = 4;
-            this.btnProfile.Text = "👤 Thông tin cá nhân";
-            this.btnProfile.UseVisualStyleBackColor = false;
-            // 
-            // btnLogout
-            // 
-            this.btnLogout.BackColor = System.Drawing.Color.FromArgb(220, 53, 69);
-            this.btnLogout.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.btnLogout.Dock = System.Windows.Forms.DockStyle.Top;
-            this.btnLogout.FlatAppearance.BorderSize = 0;
-            this.btnLogout.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnLogout.Font = new System.Drawing.Font("Segoe UI", 9.5F);
-            this.btnLogout.ForeColor = System.Drawing.Color.White;
-            this.btnLogout.Location = new System.Drawing.Point(8, 178);
-            this.btnLogout.Name = "btnLogout";
-            this.btnLogout.Size = new System.Drawing.Size(264, 34);
-            this.btnLogout.TabIndex = 5;
-            this.btnLogout.Text = "🚪 Đăng xuất";
-            this.btnLogout.UseVisualStyleBackColor = false;
+            splitContainer.Panel2.Controls.Add(pnlChatArea);
+            splitContainer.Size = new Size(1644, 848);
+            splitContainer.SplitterDistance = 350;
+            splitContainer.SplitterWidth = 5;
+            splitContainer.TabIndex = 0;
             // 
             // lstConversations
             // 
-            this.lstConversations.BorderStyle = System.Windows.Forms.BorderStyle.None;
-            this.lstConversations.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
-            this.colName,
-            this.colMembers,
-            this.colType});
-            this.lstConversations.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.lstConversations.Font = new System.Drawing.Font("Segoe UI", 9.5F);
-            this.lstConversations.FullRowSelect = true;
-            this.lstConversations.HeaderStyle = System.Windows.Forms.ColumnHeaderStyle.Nonclickable;
-            this.lstConversations.HideSelection = false;
-            this.lstConversations.Location = new System.Drawing.Point(0, 0);
-            this.lstConversations.MultiSelect = false;
-            this.lstConversations.Name = "lstConversations";
-            this.lstConversations.Size = new System.Drawing.Size(280, 478);
-            this.lstConversations.TabIndex = 0;
-            this.lstConversations.UseCompatibleStateImageBehavior = false;
-            this.lstConversations.View = System.Windows.Forms.View.Details;
+            lstConversations.BorderStyle = BorderStyle.None;
+            lstConversations.Columns.AddRange(new ColumnHeader[] { colName, colMembers, colType });
+            lstConversations.Dock = DockStyle.Fill;
+            lstConversations.Font = new Font("Segoe UI", 9.5F);
+            lstConversations.FullRowSelect = true;
+            lstConversations.HeaderStyle = ColumnHeaderStyle.Nonclickable;
+            lstConversations.Location = new Point(0, 0);
+            lstConversations.Margin = new Padding(4, 4, 4, 4);
+            lstConversations.MultiSelect = false;
+            lstConversations.Name = "lstConversations";
+            lstConversations.Size = new Size(350, 560);
+            lstConversations.TabIndex = 0;
+            lstConversations.UseCompatibleStateImageBehavior = false;
+            lstConversations.View = View.Details;
             // 
             // colName
             // 
-            this.colName.Text = "Cuộc trò chuyện";
-            this.colName.Width = 160;
+            colName.Text = "Cuộc trò chuyện";
+            colName.Width = 160;
             // 
             // colMembers
             // 
-            this.colMembers.Text = "👥";
-            this.colMembers.Width = 45;
+            colMembers.Text = "👥";
+            colMembers.Width = 45;
             // 
             // colType
             // 
-            this.colType.Text = "Loại";
-            this.colType.Width = 55;
+            colType.Text = "Loại";
+            colType.Width = 55;
             // 
-            // pnlChatArea - correct order for Dock layout
+            // pnlConvButtons
             // 
-            this.pnlChatArea.BackColor = System.Drawing.Color.FromArgb(245, 245, 248);
-            this.pnlChatArea.Controls.Add(this.pnlInput);
-            this.pnlChatArea.Controls.Add(this.pnlMessages);
-            this.pnlChatArea.Controls.Add(this.lblChatTitle);
-            this.pnlChatArea.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.pnlChatArea.Location = new System.Drawing.Point(0, 0);
-            this.pnlChatArea.Name = "pnlChatArea";
-            this.pnlChatArea.Size = new System.Drawing.Size(816, 678);
-            this.pnlChatArea.TabIndex = 0;
+            pnlConvButtons.BackColor = Color.FromArgb(240, 242, 245);
+            pnlConvButtons.Controls.Add(btnCreateGroup);
+            pnlConvButtons.Controls.Add(btnPrivateChat);
+            pnlConvButtons.Controls.Add(btnViewMembers);
+            pnlConvButtons.Controls.Add(btnRefresh);
+            pnlConvButtons.Controls.Add(btnProfile);
+            pnlConvButtons.Controls.Add(btnLogout);
+            pnlConvButtons.Dock = DockStyle.Bottom;
+            pnlConvButtons.Location = new Point(0, 560);
+            pnlConvButtons.Margin = new Padding(4, 4, 4, 4);
+            pnlConvButtons.Name = "pnlConvButtons";
+            pnlConvButtons.Padding = new Padding(10, 10, 10, 10);
+            pnlConvButtons.Size = new Size(350, 288);
+            pnlConvButtons.TabIndex = 1;
             // 
-            // lblChatTitle
+            // btnCreateGroup
             // 
-            this.lblChatTitle.BackColor = System.Drawing.Color.FromArgb(0, 132, 255);
-            this.lblChatTitle.Dock = System.Windows.Forms.DockStyle.Top;
-            this.lblChatTitle.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold);
-            this.lblChatTitle.ForeColor = System.Drawing.Color.White;
-            this.lblChatTitle.Location = new System.Drawing.Point(0, 0);
-            this.lblChatTitle.Name = "lblChatTitle";
-            this.lblChatTitle.Padding = new System.Windows.Forms.Padding(15, 0, 0, 0);
-            this.lblChatTitle.Size = new System.Drawing.Size(816, 45);
-            this.lblChatTitle.TabIndex = 0;
-            this.lblChatTitle.Text = "💬 Chọn cuộc trò chuyện";
-            this.lblChatTitle.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            btnCreateGroup.BackColor = Color.FromArgb(0, 132, 255);
+            btnCreateGroup.Cursor = Cursors.Hand;
+            btnCreateGroup.Dock = DockStyle.Top;
+            btnCreateGroup.FlatAppearance.BorderSize = 0;
+            btnCreateGroup.FlatStyle = FlatStyle.Flat;
+            btnCreateGroup.Font = new Font("Segoe UI", 9.5F);
+            btnCreateGroup.ForeColor = Color.White;
+            btnCreateGroup.Location = new Point(10, 220);
+            btnCreateGroup.Margin = new Padding(4, 4, 4, 4);
+            btnCreateGroup.Name = "btnCreateGroup";
+            btnCreateGroup.Size = new Size(330, 42);
+            btnCreateGroup.TabIndex = 0;
+            btnCreateGroup.Text = "➕ Tạo nhóm mới";
+            btnCreateGroup.UseVisualStyleBackColor = false;
             // 
-            // pnlMessages
+            // btnPrivateChat
             // 
-            this.pnlMessages.AutoScroll = true;
-            this.pnlMessages.BackColor = System.Drawing.Color.FromArgb(245, 245, 248);
-            this.pnlMessages.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.pnlMessages.Location = new System.Drawing.Point(0, 45);
-            this.pnlMessages.Name = "pnlMessages";
-            this.pnlMessages.Padding = new System.Windows.Forms.Padding(10);
-            this.pnlMessages.Size = new System.Drawing.Size(816, 483);
-            this.pnlMessages.TabIndex = 1;
+            btnPrivateChat.BackColor = Color.FromArgb(40, 167, 69);
+            btnPrivateChat.Cursor = Cursors.Hand;
+            btnPrivateChat.Dock = DockStyle.Top;
+            btnPrivateChat.FlatAppearance.BorderSize = 0;
+            btnPrivateChat.FlatStyle = FlatStyle.Flat;
+            btnPrivateChat.Font = new Font("Segoe UI", 9.5F);
+            btnPrivateChat.ForeColor = Color.White;
+            btnPrivateChat.Location = new Point(10, 178);
+            btnPrivateChat.Margin = new Padding(4, 4, 4, 4);
+            btnPrivateChat.Name = "btnPrivateChat";
+            btnPrivateChat.Size = new Size(330, 42);
+            btnPrivateChat.TabIndex = 1;
+            btnPrivateChat.Text = "💬 Chat riêng";
+            btnPrivateChat.UseVisualStyleBackColor = false;
+            // 
+            // btnViewMembers
+            // 
+            btnViewMembers.BackColor = Color.FromArgb(108, 117, 125);
+            btnViewMembers.Cursor = Cursors.Hand;
+            btnViewMembers.Dock = DockStyle.Top;
+            btnViewMembers.FlatAppearance.BorderSize = 0;
+            btnViewMembers.FlatStyle = FlatStyle.Flat;
+            btnViewMembers.Font = new Font("Segoe UI", 9.5F);
+            btnViewMembers.ForeColor = Color.White;
+            btnViewMembers.Location = new Point(10, 136);
+            btnViewMembers.Margin = new Padding(4, 4, 4, 4);
+            btnViewMembers.Name = "btnViewMembers";
+            btnViewMembers.Size = new Size(330, 42);
+            btnViewMembers.TabIndex = 2;
+            btnViewMembers.Text = "👥 Xem thành viên";
+            btnViewMembers.UseVisualStyleBackColor = false;
+            // 
+            // btnRefresh
+            // 
+            btnRefresh.BackColor = Color.FromArgb(255, 193, 7);
+            btnRefresh.Cursor = Cursors.Hand;
+            btnRefresh.Dock = DockStyle.Top;
+            btnRefresh.FlatAppearance.BorderSize = 0;
+            btnRefresh.FlatStyle = FlatStyle.Flat;
+            btnRefresh.Font = new Font("Segoe UI", 9.5F);
+            btnRefresh.ForeColor = Color.Black;
+            btnRefresh.Location = new Point(10, 94);
+            btnRefresh.Margin = new Padding(4, 4, 4, 4);
+            btnRefresh.Name = "btnRefresh";
+            btnRefresh.Size = new Size(330, 42);
+            btnRefresh.TabIndex = 3;
+            btnRefresh.Text = "🔄 Làm mới";
+            btnRefresh.UseVisualStyleBackColor = false;
+            // 
+            // btnProfile
+            // 
+            btnProfile.BackColor = Color.FromArgb(23, 162, 184);
+            btnProfile.Cursor = Cursors.Hand;
+            btnProfile.Dock = DockStyle.Top;
+            btnProfile.FlatAppearance.BorderSize = 0;
+            btnProfile.FlatStyle = FlatStyle.Flat;
+            btnProfile.Font = new Font("Segoe UI", 9.5F);
+            btnProfile.ForeColor = Color.White;
+            btnProfile.Location = new Point(10, 52);
+            btnProfile.Margin = new Padding(4, 4, 4, 4);
+            btnProfile.Name = "btnProfile";
+            btnProfile.Size = new Size(330, 42);
+            btnProfile.TabIndex = 4;
+            btnProfile.Text = "👤 Thông tin cá nhân";
+            btnProfile.UseVisualStyleBackColor = false;
+            // 
+            // btnLogout
+            // 
+            btnLogout.BackColor = Color.FromArgb(220, 53, 69);
+            btnLogout.Cursor = Cursors.Hand;
+            btnLogout.Dock = DockStyle.Top;
+            btnLogout.FlatAppearance.BorderSize = 0;
+            btnLogout.FlatStyle = FlatStyle.Flat;
+            btnLogout.Font = new Font("Segoe UI", 9.5F);
+            btnLogout.ForeColor = Color.White;
+            btnLogout.Location = new Point(10, 10);
+            btnLogout.Margin = new Padding(4, 4, 4, 4);
+            btnLogout.Name = "btnLogout";
+            btnLogout.Size = new Size(330, 42);
+            btnLogout.TabIndex = 5;
+            btnLogout.Text = "🚪 Đăng xuất";
+            btnLogout.UseVisualStyleBackColor = false;
+            // 
+            // pnlChatArea
+            // 
+            pnlChatArea.BackColor = Color.FromArgb(245, 245, 248);
+            pnlChatArea.Controls.Add(pnlInput);
+            pnlChatArea.Controls.Add(pnlMessages);
+            pnlChatArea.Controls.Add(lblChatTitle);
+            pnlChatArea.Dock = DockStyle.Fill;
+            pnlChatArea.Location = new Point(0, 0);
+            pnlChatArea.Margin = new Padding(4, 4, 4, 4);
+            pnlChatArea.Name = "pnlChatArea";
+            pnlChatArea.Size = new Size(1289, 848);
+            pnlChatArea.TabIndex = 0;
             // 
             // pnlInput
             // 
-            this.pnlInput.BackColor = System.Drawing.Color.White;
-            this.pnlInput.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.pnlInput.Controls.Add(this.pnlReply);
-            this.pnlInput.Controls.Add(this.txtMessage);
-            this.pnlInput.Controls.Add(this.cbSecurityLabel);
-            this.pnlInput.Controls.Add(this.btnAttachment);
-            this.pnlInput.Controls.Add(this.btnSend);
-            this.pnlInput.Dock = System.Windows.Forms.DockStyle.Bottom;
-            this.pnlInput.Location = new System.Drawing.Point(0, 528);
-            this.pnlInput.Name = "pnlInput";
-            this.pnlInput.Padding = new System.Windows.Forms.Padding(10);
-            this.pnlInput.Size = new System.Drawing.Size(816, 150);
-            this.pnlInput.TabIndex = 2;
+            pnlInput.BackColor = Color.White;
+            pnlInput.BorderStyle = BorderStyle.FixedSingle;
+            pnlInput.Controls.Add(pnlReply);
+            pnlInput.Controls.Add(txtMessage);
+            pnlInput.Controls.Add(cbSecurityLabel);
+            pnlInput.Controls.Add(btnAttachment);
+            pnlInput.Controls.Add(btnSend);
+            pnlInput.Dock = DockStyle.Bottom;
+            pnlInput.Location = new Point(0, 661);
+            pnlInput.Margin = new Padding(4, 4, 4, 4);
+            pnlInput.Name = "pnlInput";
+            pnlInput.Padding = new Padding(12, 12, 12, 12);
+            pnlInput.Size = new Size(1289, 187);
+            pnlInput.TabIndex = 2;
             // 
             // pnlReply
             // 
-            this.pnlReply.BackColor = System.Drawing.Color.FromArgb(230, 243, 255);
-            this.pnlReply.Controls.Add(this.lblReplyTo);
-            this.pnlReply.Controls.Add(this.btnCancelReply);
-            this.pnlReply.Dock = System.Windows.Forms.DockStyle.Top;
-            this.pnlReply.Location = new System.Drawing.Point(10, 10);
-            this.pnlReply.Name = "pnlReply";
-            this.pnlReply.Size = new System.Drawing.Size(794, 32);
-            this.pnlReply.TabIndex = 0;
-            this.pnlReply.Visible = false;
+            pnlReply.BackColor = Color.FromArgb(230, 243, 255);
+            pnlReply.Controls.Add(lblReplyTo);
+            pnlReply.Controls.Add(btnCancelReply);
+            pnlReply.Dock = DockStyle.Top;
+            pnlReply.Location = new Point(12, 12);
+            pnlReply.Margin = new Padding(4, 4, 4, 4);
+            pnlReply.Name = "pnlReply";
+            pnlReply.Size = new Size(1263, 40);
+            pnlReply.TabIndex = 0;
+            pnlReply.Visible = false;
             // 
             // lblReplyTo
             // 
-            this.lblReplyTo.AutoSize = true;
-            this.lblReplyTo.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Italic);
-            this.lblReplyTo.ForeColor = System.Drawing.Color.FromArgb(80, 80, 80);
-            this.lblReplyTo.Location = new System.Drawing.Point(10, 7);
-            this.lblReplyTo.Name = "lblReplyTo";
-            this.lblReplyTo.Size = new System.Drawing.Size(100, 20);
-            this.lblReplyTo.TabIndex = 0;
-            this.lblReplyTo.Text = "↩ Trả lời: ...";
+            lblReplyTo.AutoSize = true;
+            lblReplyTo.Font = new Font("Segoe UI", 9F, FontStyle.Italic);
+            lblReplyTo.ForeColor = Color.FromArgb(80, 80, 80);
+            lblReplyTo.Location = new Point(12, 9);
+            lblReplyTo.Margin = new Padding(4, 0, 4, 0);
+            lblReplyTo.Name = "lblReplyTo";
+            lblReplyTo.Size = new Size(104, 25);
+            lblReplyTo.TabIndex = 0;
+            lblReplyTo.Text = "↩ Trả lời: ...";
             // 
             // btnCancelReply
             // 
-            this.btnCancelReply.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnCancelReply.FlatAppearance.BorderSize = 0;
-            this.btnCancelReply.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnCancelReply.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Bold);
-            this.btnCancelReply.ForeColor = System.Drawing.Color.FromArgb(150, 150, 150);
-            this.btnCancelReply.Location = new System.Drawing.Point(760, 2);
-            this.btnCancelReply.Name = "btnCancelReply";
-            this.btnCancelReply.Size = new System.Drawing.Size(30, 28);
-            this.btnCancelReply.TabIndex = 1;
-            this.btnCancelReply.Text = "✕";
-            this.btnCancelReply.UseVisualStyleBackColor = true;
+            btnCancelReply.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnCancelReply.FlatAppearance.BorderSize = 0;
+            btnCancelReply.FlatStyle = FlatStyle.Flat;
+            btnCancelReply.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            btnCancelReply.ForeColor = Color.FromArgb(150, 150, 150);
+            btnCancelReply.Location = new Point(1221, 2);
+            btnCancelReply.Margin = new Padding(4, 4, 4, 4);
+            btnCancelReply.Name = "btnCancelReply";
+            btnCancelReply.Size = new Size(38, 35);
+            btnCancelReply.TabIndex = 1;
+            btnCancelReply.Text = "✕";
+            btnCancelReply.UseVisualStyleBackColor = true;
             // 
             // txtMessage
             // 
-            this.txtMessage.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.txtMessage.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.txtMessage.Font = new System.Drawing.Font("Segoe UI", 10F);
-            this.txtMessage.Location = new System.Drawing.Point(10, 48);
-            this.txtMessage.Multiline = true;
-            this.txtMessage.Name = "txtMessage";
-            this.txtMessage.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-            this.txtMessage.Size = new System.Drawing.Size(560, 88);
-            this.txtMessage.TabIndex = 1;
+            txtMessage.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            txtMessage.BorderStyle = BorderStyle.FixedSingle;
+            txtMessage.Font = new Font("Segoe UI", 10F);
+            txtMessage.Location = new Point(12, 60);
+            txtMessage.Margin = new Padding(4, 4, 4, 4);
+            txtMessage.Multiline = true;
+            txtMessage.Name = "txtMessage";
+            txtMessage.ScrollBars = ScrollBars.Vertical;
+            txtMessage.Size = new Size(904, 110);
+            txtMessage.TabIndex = 1;
             // 
             // cbSecurityLabel
             // 
-            this.cbSecurityLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.cbSecurityLabel.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cbSecurityLabel.Font = new System.Drawing.Font("Segoe UI", 9F);
-            this.cbSecurityLabel.FormattingEnabled = true;
-            this.cbSecurityLabel.Location = new System.Drawing.Point(580, 48);
-            this.cbSecurityLabel.Name = "cbSecurityLabel";
-            this.cbSecurityLabel.Size = new System.Drawing.Size(120, 28);
-            this.cbSecurityLabel.TabIndex = 2;
+            cbSecurityLabel.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            cbSecurityLabel.DropDownStyle = ComboBoxStyle.DropDownList;
+            cbSecurityLabel.Font = new Font("Segoe UI", 9F);
+            cbSecurityLabel.FormattingEnabled = true;
+            cbSecurityLabel.Location = new Point(941, 62);
+            cbSecurityLabel.Margin = new Padding(4, 4, 4, 4);
+            cbSecurityLabel.Name = "cbSecurityLabel";
+            cbSecurityLabel.Size = new Size(172, 33);
+            cbSecurityLabel.TabIndex = 2;
             // 
             // btnAttachment
             // 
-            this.btnAttachment.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnAttachment.BackColor = System.Drawing.Color.FromArgb(108, 117, 125);
-            this.btnAttachment.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.btnAttachment.FlatAppearance.BorderSize = 0;
-            this.btnAttachment.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnAttachment.Font = new System.Drawing.Font("Segoe UI", 12F);
-            this.btnAttachment.ForeColor = System.Drawing.Color.White;
-            this.btnAttachment.Location = new System.Drawing.Point(580, 85);
-            this.btnAttachment.Name = "btnAttachment";
-            this.btnAttachment.Size = new System.Drawing.Size(105, 50);
-            this.btnAttachment.TabIndex = 3;
-            this.btnAttachment.Text = "📎 Đính kèm";
-            this.btnAttachment.UseVisualStyleBackColor = false;
+            btnAttachment.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnAttachment.BackColor = Color.FromArgb(108, 117, 125);
+            btnAttachment.Cursor = Cursors.Hand;
+            btnAttachment.FlatAppearance.BorderSize = 0;
+            btnAttachment.FlatStyle = FlatStyle.Flat;
+            btnAttachment.Font = new Font("Segoe UI", 12F);
+            btnAttachment.ForeColor = Color.White;
+            btnAttachment.Location = new Point(941, 115);
+            btnAttachment.Margin = new Padding(4, 4, 4, 4);
+            btnAttachment.Name = "btnAttachment";
+            btnAttachment.Size = new Size(172, 45);
+            btnAttachment.TabIndex = 3;
+            btnAttachment.Text = "📎 Đính kèm";
+            btnAttachment.UseVisualStyleBackColor = false;
             // 
             // btnSend
             // 
-            this.btnSend.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnSend.BackColor = System.Drawing.Color.FromArgb(0, 132, 255);
-            this.btnSend.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.btnSend.FlatAppearance.BorderSize = 0;
-            this.btnSend.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnSend.Font = new System.Drawing.Font("Segoe UI", 11F, System.Drawing.FontStyle.Bold);
-            this.btnSend.ForeColor = System.Drawing.Color.White;
-            this.btnSend.Location = new System.Drawing.Point(695, 48);
-            this.btnSend.Name = "btnSend";
-            this.btnSend.Size = new System.Drawing.Size(105, 87);
-            this.btnSend.TabIndex = 4;
-            this.btnSend.Text = "Gửi ➤";
-            this.btnSend.UseVisualStyleBackColor = false;
+            btnSend.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnSend.BackColor = Color.FromArgb(0, 132, 255);
+            btnSend.Cursor = Cursors.Hand;
+            btnSend.FlatAppearance.BorderSize = 0;
+            btnSend.FlatStyle = FlatStyle.Flat;
+            btnSend.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
+            btnSend.ForeColor = Color.White;
+            btnSend.Location = new Point(1121, 62);
+            btnSend.Margin = new Padding(4, 4, 4, 4);
+            btnSend.Name = "btnSend";
+            btnSend.Size = new Size(141, 98);
+            btnSend.TabIndex = 4;
+            btnSend.Text = "Gửi ➤";
+            btnSend.UseVisualStyleBackColor = false;
+            // 
+            // pnlMessages
+            // 
+            pnlMessages.AutoScroll = true;
+            pnlMessages.BackColor = Color.FromArgb(245, 245, 248);
+            pnlMessages.Dock = DockStyle.Fill;
+            pnlMessages.Location = new Point(0, 56);
+            pnlMessages.Margin = new Padding(4, 4, 4, 4);
+            pnlMessages.Name = "pnlMessages";
+            pnlMessages.Padding = new Padding(12, 12, 12, 12);
+            pnlMessages.Size = new Size(1289, 792);
+            pnlMessages.TabIndex = 1;
+            // 
+            // lblChatTitle
+            // 
+            lblChatTitle.BackColor = Color.FromArgb(0, 132, 255);
+            lblChatTitle.Dock = DockStyle.Top;
+            lblChatTitle.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
+            lblChatTitle.ForeColor = Color.White;
+            lblChatTitle.Location = new Point(0, 0);
+            lblChatTitle.Margin = new Padding(4, 0, 4, 0);
+            lblChatTitle.Name = "lblChatTitle";
+            lblChatTitle.Padding = new Padding(19, 0, 0, 0);
+            lblChatTitle.Size = new Size(1289, 56);
+            lblChatTitle.TabIndex = 0;
+            lblChatTitle.Text = "💬 Chọn cuộc trò chuyện";
+            lblChatTitle.TextAlign = ContentAlignment.MiddleLeft;
             // 
             // statusStrip
             // 
-            this.statusStrip.BackColor = System.Drawing.Color.FromArgb(248, 249, 250);
-            this.statusStrip.ImageScalingSize = new System.Drawing.Size(20, 20);
-            this.statusStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.lblStatus});
-            this.statusStrip.Location = new System.Drawing.Point(0, 678);
-            this.statusStrip.Name = "statusStrip";
-            this.statusStrip.Size = new System.Drawing.Size(1100, 26);
-            this.statusStrip.TabIndex = 1;
-            this.statusStrip.Text = "statusStrip1";
+            statusStrip.BackColor = Color.FromArgb(248, 249, 250);
+            statusStrip.ImageScalingSize = new Size(20, 20);
+            statusStrip.Items.AddRange(new ToolStripItem[] { lblStatus });
+            statusStrip.Location = new Point(0, 848);
+            statusStrip.Name = "statusStrip";
+            statusStrip.Padding = new Padding(1, 0, 18, 0);
+            statusStrip.Size = new Size(1644, 32);
+            statusStrip.TabIndex = 1;
+            statusStrip.Text = "statusStrip1";
             // 
             // lblStatus
             // 
-            this.lblStatus.ForeColor = System.Drawing.Color.FromArgb(40, 167, 69);
-            this.lblStatus.Name = "lblStatus";
-            this.lblStatus.Size = new System.Drawing.Size(68, 20);
-            this.lblStatus.Text = "Sẵn sàng";
+            lblStatus.ForeColor = Color.FromArgb(40, 167, 69);
+            lblStatus.Name = "lblStatus";
+            lblStatus.Size = new Size(84, 25);
+            lblStatus.Text = "Sẵn sàng";
             // 
             // ChatFormNew
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 20F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1100, 704);
-            this.Controls.Add(this.splitContainer);
-            this.Controls.Add(this.statusStrip);
-            this.Font = new System.Drawing.Font("Segoe UI", 9F);
-            this.MinimumSize = new System.Drawing.Size(900, 600);
-            this.Name = "ChatFormNew";
-            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "💬 Chat Application";
-            this.splitContainer.Panel1.ResumeLayout(false);
-            this.splitContainer.Panel2.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)(this.splitContainer)).EndInit();
-            this.splitContainer.ResumeLayout(false);
-            this.pnlConvButtons.ResumeLayout(false);
-            this.pnlChatArea.ResumeLayout(false);
-            this.pnlInput.ResumeLayout(false);
-            this.pnlInput.PerformLayout();
-            this.pnlReply.ResumeLayout(false);
-            this.pnlReply.PerformLayout();
-            this.statusStrip.ResumeLayout(false);
-            this.statusStrip.PerformLayout();
-            this.ResumeLayout(false);
-            this.PerformLayout();
+            AutoScaleDimensions = new SizeF(10F, 25F);
+            AutoScaleMode = AutoScaleMode.Font;
+            ClientSize = new Size(1644, 880);
+            Controls.Add(splitContainer);
+            Controls.Add(statusStrip);
+            Font = new Font("Segoe UI", 9F);
+            Margin = new Padding(4, 4, 4, 4);
+            MinimumSize = new Size(1120, 736);
+            Name = "ChatFormNew";
+            StartPosition = FormStartPosition.CenterScreen;
+            Text = "💬 Chat Application";
+            splitContainer.Panel1.ResumeLayout(false);
+            splitContainer.Panel2.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)splitContainer).EndInit();
+            splitContainer.ResumeLayout(false);
+            pnlConvButtons.ResumeLayout(false);
+            pnlChatArea.ResumeLayout(false);
+            pnlInput.ResumeLayout(false);
+            pnlInput.PerformLayout();
+            pnlReply.ResumeLayout(false);
+            pnlReply.PerformLayout();
+            statusStrip.ResumeLayout(false);
+            statusStrip.PerformLayout();
+            ResumeLayout(false);
+            PerformLayout();
         }
 
         #endregion

@@ -62,8 +62,8 @@ namespace ChatClient.Forms
         {
             this.SuspendLayout();
 
-            // Form settings
-            this.ClientSize = new Size(450, 600);
+            // Form settings - Made wider with better spacing
+            this.ClientSize = new Size(700, 650);
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
             this.MinimizeBox = false;
@@ -74,7 +74,7 @@ namespace ChatClient.Forms
             // Avatar
             picAvatar = new PictureBox
             {
-                Location = new Point(175, 20),
+                Location = new Point(300, 20),
                 Size = new Size(100, 100),
                 SizeMode = PictureBoxSizeMode.StretchImage,
                 BorderStyle = BorderStyle.None,
@@ -85,7 +85,7 @@ namespace ChatClient.Forms
             lblUsername = new Label
             {
                 Location = new Point(50, 135),
-                Size = new Size(350, 30),
+                Size = new Size(600, 30),
                 Text = "Loading...",
                 TextAlign = ContentAlignment.MiddleCenter,
                 Font = new Font("Segoe UI Semibold", 14F, FontStyle.Bold),
@@ -96,7 +96,7 @@ namespace ChatClient.Forms
             lblStatus = new Label
             {
                 Location = new Point(50, 165),
-                Size = new Size(350, 20),
+                Size = new Size(600, 20),
                 Text = "Online",
                 TextAlign = ContentAlignment.MiddleCenter,
                 Font = new Font("Segoe UI", 9F),
@@ -106,8 +106,8 @@ namespace ChatClient.Forms
             // Info Panel
             pnlInfo = new Panel
             {
-                Location = new Point(30, 200),
-                Size = new Size(390, 310),
+                Location = new Point(50, 200),
+                Size = new Size(600, 340),
                 BackColor = Color.White,
                 BorderStyle = BorderStyle.None
             };
@@ -115,18 +115,18 @@ namespace ChatClient.Forms
             // Full Name
             lblFullNameTitle = new Label
             {
-                Location = new Point(15, 15),
-                Size = new Size(100, 25),
+                Location = new Point(20, 15),
+                Size = new Size(150, 25),
                 Text = "Họ và tên:",
-                Font = new Font("Segoe UI", 9F),
+                Font = new Font("Segoe UI", 10F),
                 ForeColor = Color.FromArgb(108, 117, 125)
             };
 
             txtFullName = new TextBox
             {
-                Location = new Point(120, 15),
-                Size = new Size(250, 25),
-                Font = new Font("Segoe UI", 9.5F),
+                Location = new Point(200, 15),
+                Size = new Size(370, 25),
+                Font = new Font("Segoe UI", 10F),
                 BorderStyle = BorderStyle.FixedSingle,
                 ReadOnly = true
             };
@@ -134,18 +134,18 @@ namespace ChatClient.Forms
             // Email
             lblEmailTitle = new Label
             {
-                Location = new Point(15, 55),
-                Size = new Size(100, 25),
+                Location = new Point(20, 55),
+                Size = new Size(150, 25),
                 Text = "Email:",
-                Font = new Font("Segoe UI", 9F),
+                Font = new Font("Segoe UI", 10F),
                 ForeColor = Color.FromArgb(108, 117, 125)
             };
 
             txtEmail = new TextBox
             {
-                Location = new Point(120, 55),
-                Size = new Size(250, 25),
-                Font = new Font("Segoe UI", 9.5F),
+                Location = new Point(200, 55),
+                Size = new Size(370, 25),
+                Font = new Font("Segoe UI", 10F),
                 BorderStyle = BorderStyle.FixedSingle,
                 ReadOnly = true
             };
@@ -153,18 +153,18 @@ namespace ChatClient.Forms
             // Phone
             lblPhoneTitle = new Label
             {
-                Location = new Point(15, 95),
-                Size = new Size(100, 25),
+                Location = new Point(20, 95),
+                Size = new Size(150, 25),
                 Text = "Số điện thoại:",
-                Font = new Font("Segoe UI", 9F),
+                Font = new Font("Segoe UI", 10F),
                 ForeColor = Color.FromArgb(108, 117, 125)
             };
 
             txtPhone = new TextBox
             {
-                Location = new Point(120, 95),
-                Size = new Size(250, 25),
-                Font = new Font("Segoe UI", 9.5F),
+                Location = new Point(200, 95),
+                Size = new Size(370, 25),
+                Font = new Font("Segoe UI", 10F),
                 BorderStyle = BorderStyle.FixedSingle,
                 ReadOnly = true
             };
@@ -172,18 +172,18 @@ namespace ChatClient.Forms
             // Department
             lblDepartmentTitle = new Label
             {
-                Location = new Point(15, 135),
-                Size = new Size(100, 25),
+                Location = new Point(20, 135),
+                Size = new Size(150, 25),
                 Text = "Phòng ban:",
-                Font = new Font("Segoe UI", 9F),
+                Font = new Font("Segoe UI", 10F),
                 ForeColor = Color.FromArgb(108, 117, 125)
             };
 
             cboDepartment = new ComboBox
             {
-                Location = new Point(120, 132),
-                Size = new Size(250, 25),
-                Font = new Font("Segoe UI", 9.5F),
+                Location = new Point(200, 132),
+                Size = new Size(370, 25),
+                Font = new Font("Segoe UI", 10F),
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 Enabled = false
             };
@@ -194,18 +194,18 @@ namespace ChatClient.Forms
             // Position
             lblPositionTitle = new Label
             {
-                Location = new Point(15, 170),
-                Size = new Size(100, 25),
+                Location = new Point(20, 170),
+                Size = new Size(150, 25),
                 Text = "Chức vụ:",
-                Font = new Font("Segoe UI", 9F),
+                Font = new Font("Segoe UI", 10F),
                 ForeColor = Color.FromArgb(108, 117, 125)
             };
 
             cboPosition = new ComboBox
             {
-                Location = new Point(120, 167),
-                Size = new Size(250, 25),
-                Font = new Font("Segoe UI", 9.5F),
+                Location = new Point(200, 167),
+                Size = new Size(370, 25),
+                Font = new Font("Segoe UI", 10F),
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 Enabled = false
             };
@@ -216,18 +216,18 @@ namespace ChatClient.Forms
             // Bio
             lblBioTitle = new Label
             {
-                Location = new Point(15, 205),
-                Size = new Size(100, 25),
+                Location = new Point(20, 210),
+                Size = new Size(150, 25),
                 Text = "Giới thiệu:",
-                Font = new Font("Segoe UI", 9F),
+                Font = new Font("Segoe UI", 10F),
                 ForeColor = Color.FromArgb(108, 117, 125)
             };
 
             txtBio = new TextBox
             {
-                Location = new Point(120, 205),
-                Size = new Size(250, 60),
-                Font = new Font("Segoe UI", 9.5F),
+                Location = new Point(200, 210),
+                Size = new Size(370, 70),
+                Font = new Font("Segoe UI", 10F),
                 BorderStyle = BorderStyle.FixedSingle,
                 Multiline = true,
                 ReadOnly = true,
@@ -237,10 +237,10 @@ namespace ChatClient.Forms
             // Member Since
             lblMemberSince = new Label
             {
-                Location = new Point(15, 275),
-                Size = new Size(360, 20),
+                Location = new Point(20, 295),
+                Size = new Size(560, 25),
                 Text = "Thành viên từ: ...",
-                Font = new Font("Segoe UI", 8.5F),
+                Font = new Font("Segoe UI", 9F),
                 ForeColor = Color.FromArgb(144, 149, 160),
                 TextAlign = ContentAlignment.MiddleLeft
             };
@@ -258,20 +258,20 @@ namespace ChatClient.Forms
             // Buttons Panel
             pnlButtons = new Panel
             {
-                Location = new Point(30, 520),
-                Size = new Size(390, 50),
+                Location = new Point(50, 555),
+                Size = new Size(600, 55),
                 BackColor = Color.Transparent
             };
 
             btnEdit = new Button
             {
-                Location = new Point(80, 10),
-                Size = new Size(110, 35),
+                Location = new Point(150, 10),
+                Size = new Size(130, 40),
                 Text = "✏️ Chỉnh sửa",
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(0, 132, 255),
                 ForeColor = Color.White,
-                Font = new Font("Segoe UI", 9F),
+                Font = new Font("Segoe UI", 10F),
                 Cursor = Cursors.Hand,
                 Visible = _isOwnProfile
             };
@@ -279,13 +279,13 @@ namespace ChatClient.Forms
 
             btnSave = new Button
             {
-                Location = new Point(60, 10),
-                Size = new Size(110, 35),
+                Location = new Point(150, 10),
+                Size = new Size(130, 40),
                 Text = "💾 Lưu",
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(40, 167, 69),
                 ForeColor = Color.White,
-                Font = new Font("Segoe UI", 9F),
+                Font = new Font("Segoe UI", 10F),
                 Cursor = Cursors.Hand,
                 Visible = false
             };
@@ -293,13 +293,13 @@ namespace ChatClient.Forms
 
             btnCancel = new Button
             {
-                Location = new Point(180, 10),
-                Size = new Size(110, 35),
+                Location = new Point(300, 10),
+                Size = new Size(130, 40),
                 Text = "❌ Hủy",
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(220, 53, 69),
                 ForeColor = Color.White,
-                Font = new Font("Segoe UI", 9F),
+                Font = new Font("Segoe UI", 10F),
                 Cursor = Cursors.Hand,
                 Visible = false
             };
@@ -307,13 +307,13 @@ namespace ChatClient.Forms
 
             btnClose = new Button
             {
-                Location = new Point(200, 10),
-                Size = new Size(110, 35),
+                Location = new Point(320, 10),
+                Size = new Size(130, 40),
                 Text = "Đóng",
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(108, 117, 125),
                 ForeColor = Color.White,
-                Font = new Font("Segoe UI", 9F),
+                Font = new Font("Segoe UI", 10F),
                 Cursor = Cursors.Hand,
                 Visible = _isOwnProfile
             };
@@ -395,21 +395,20 @@ namespace ChatClient.Forms
         {
             try
             {
-                var targetMatk = _isOwnProfile ? _currentUser.Matk : _viewingMatk!;
-
-                // TODO: Call API to get user details
-                // For now, use mock data
-                lblUsername.Text = _isOwnProfile ? _currentUser.Username : "User " + targetMatk;
-                txtFullName.Text = "Nguyễn Văn A";
-                txtEmail.Text = "user@example.com";
-                txtPhone.Text = "0123456789";
-                cboDepartment.SelectedIndex = 4; // Phòng IT
-                cboPosition.SelectedIndex = 4; // Nhân Viên
-                txtBio.Text = "Xin chào! Tôi đang sử dụng Chat App.";
-                lblMemberSince.Text = "Ngày tạo tài khoản: 01/01/2024";
-                lblStatus.Text = "Trực tuyến";
-
-                picAvatar.Invalidate(); // Trigger repaint for avatar
+                // TODO: Get full profile from server in future
+                // For now, use current user data from login
+                
+                lblUsername.Text = _currentUser.Username;
+                txtFullName.Text = _currentUser.Username; // TODO: Load from NGUOIDUNG table
+                txtEmail.Text = ""; // TODO: Load from NGUOIDUNG table
+                txtPhone.Text = "";
+                txtBio.Text = "";
+                lblMemberSince.Text = "📅 Thành viên từ: N/A";
+                lblStatus.Text = "🟢 Trực tuyến";
+                
+                picAvatar.Invalidate();
+                
+                await Task.CompletedTask;
             }
             catch (Exception ex)
             {
@@ -467,6 +466,13 @@ namespace ChatClient.Forms
         {
             try
             {
+                // Validation
+                if (!string.IsNullOrEmpty(txtEmail.Text) && !txtEmail.Text.Contains("@"))
+                {
+                    MessageBox.Show("Email không hợp lệ!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
                 btnSave.Enabled = false;
 
                 // TODO: Call API to update user profile

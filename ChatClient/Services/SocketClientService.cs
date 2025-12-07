@@ -191,7 +191,7 @@ namespace ChatClient.Services
         /// <summary>
         /// Đăng ký tài khoản mới.
         /// </summary>
-        public async Task<ServerResponse?> RegisterAsync(string username, string password, string email, int clearanceLevel = 1)
+        public async Task<ServerResponse?> RegisterAsync(string username, string password, string email, int clearanceLevel = 1, string hovaten = "")
         {
             var request = new ChatRequest
             {
@@ -199,7 +199,8 @@ namespace ChatClient.Services
                 SenderUsername = username,
                 Password = password,
                 Email = email,
-                ClearanceLevel = clearanceLevel
+                ClearanceLevel = clearanceLevel,
+                Hovaten = hovaten
             };
 
             var responseJson = await SendRequestAsync(request);
@@ -856,6 +857,7 @@ namespace ChatClient.Services
         // Thêm các field cho authentication
         public string Password { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
+        public string Hovaten { get; set; } = string.Empty;
         public string Otp { get; set; } = string.Empty;
         public string NewPassword { get; set; } = string.Empty;
         // Conversation fields
@@ -930,6 +932,8 @@ namespace ChatClient.Services
         public bool IsBanned { get; set; } // IS_BANNED
         public bool IsMuted { get; set; } // IS_MUTED
         public DateTime JoinedDate { get; set; } // NGAYTHAMGIA
+        public string Email { get; set; } = string.Empty; // EMAIL
+        public string Hovaten { get; set; } = string.Empty; // HOVATEN
     }
 
     public class AdminUserDto
