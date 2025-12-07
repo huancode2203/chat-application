@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using ChatClient.Models;
 using ChatClient.Utils;
+using System.Threading;
 
 namespace ChatClient.Services
 {
@@ -21,6 +22,9 @@ namespace ChatClient.Services
         private readonly int _port;
         private TcpClient? _client;
         private NetworkStream? _stream;
+        private StreamReader? _reader;
+        private StreamWriter? _writer;
+        private readonly SemaphoreSlim _sendLock = new(1, 1);
 
         public SocketClientService(string host, int port)
         {
@@ -33,6 +37,8 @@ namespace ChatClient.Services
             _client = new TcpClient();
             await _client.ConnectAsync(_host, _port);
             _stream = _client.GetStream();
+            _reader = new StreamReader(_stream, Encoding.UTF8, leaveOpen: true);
+            _writer = new StreamWriter(_stream, Encoding.UTF8) { AutoFlush = true };
         }
 
         public bool IsConnected => _client is { Connected: true };
@@ -49,6 +55,94 @@ namespace ChatClient.Services
                 ReceiverUsername = receiverUsername,
                 Content = content,
                 SecurityLabel = securityLabel,
+                ClearanceLevel = currentUser.ClearanceLevel
+            };
+
+            var responseJson = await SendRequestAsync(request);
+            if (responseJson == null) return null;
+
+            return JsonSerializer.Deserialize<ServerResponse>(responseJson);
+        }
+
+        /// <summary>
+        /// Lấy thông tin chi tiết người dùng (yêu cầu quyền admin trên server).
+        /// </summary>
+        public async Task<ServerResponse?> GetUserDetailsAsync(User currentUser, string targetUsername)
+        {
+            var request = new ChatRequest
+            {
+                Action = "GetUserDetails",
+                SenderUsername = currentUser.Username,
+                TargetUsername = targetUsername,
+                ClearanceLevel = currentUser.ClearanceLevel
+            };
+
+            var responseJson = await SendRequestAsync(request);
+            if (responseJson == null) return null;
+
+            return JsonSerializer.Deserialize<ServerResponse>(responseJson);
+        }
+
+        /// <summary>
+        /// Cập nhật thông tin người dùng (email/clearance) - server hiện tại chỉ cập nhật email/clearance.
+        /// </summary>
+        public async Task<ServerResponse?> UpdateUserAsync(User currentUser, string targetUsername, string? email = null, int? clearanceLevel = null)
+        {
+            var request = new ChatRequest
+            {
+                Action = "UpdateUser",
+                SenderUsername = currentUser.Username,
+                TargetUsername = targetUsername,
+                Email = email ?? string.Empty,
+                ClearanceLevel = clearanceLevel ?? currentUser.ClearanceLevel
+            };
+
+            var responseJson = await SendRequestAsync(request);
+            if (responseJson == null) return null;
+
+            return JsonSerializer.Deserialize<ServerResponse>(responseJson);
+        }
+
+        private static string GetMimeTypeFromFileName(string fileName)
+        {
+            var ext = Path.GetExtension(fileName).ToLowerInvariant();
+            return ext switch
+            {
+                ".jpg" => "image/jpeg",
+                ".jpeg" => "image/jpeg",
+                ".png" => "image/png",
+                ".gif" => "image/gif",
+                ".bmp" => "image/bmp",
+                ".webp" => "image/webp",
+                ".txt" => "text/plain",
+                ".pdf" => "application/pdf",
+                ".doc" => "application/msword",
+                ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                ".xls" => "application/vnd.ms-excel",
+                ".xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                _ => "application/octet-stream"
+            };
+        }
+
+        /// <summary>
+        /// Tải file đính kèm của một tin nhắn.
+        /// </summary>
+        public async Task<ServerResponse?> DownloadAttachmentAsync(User currentUser, int messageId)
+        {
+            if (messageId <= 0)
+            {
+                return new ServerResponse
+                {
+                    Success = false,
+                    Message = "Invalid message ID."
+                };
+            }
+
+            var request = new ChatRequest
+            {
+                Action = "DownloadAttachment",
+                SenderUsername = currentUser.Username,
+                MessageId = messageId,
                 ClearanceLevel = currentUser.ClearanceLevel
             };
 
@@ -192,22 +286,28 @@ namespace ChatClient.Services
         {
             if (_stream == null)
                 throw new InvalidOperationException("Chưa kết nối tới server.");
+            if (_reader == null || _writer == null)
+                throw new InvalidOperationException("Stream reader/writer chưa được khởi tạo.");
 
-            var json = JsonSerializer.Serialize(request);
-            var encrypted = EncryptionHelper.Encrypt(json);
+            await _sendLock.WaitAsync();
+            try
+            {
+                var json = JsonSerializer.Serialize(request);
+                var encrypted = EncryptionHelper.Encrypt(json);
 
-            var data = Encoding.UTF8.GetBytes(encrypted + "\n");
-            await _stream.WriteAsync(data, 0, data.Length);
-            await _stream.FlushAsync();
+                await _writer.WriteLineAsync(encrypted);
 
-            // Đọc theo từng dòng.
-            using var reader = new StreamReader(_stream, Encoding.UTF8, leaveOpen: true);
-            var encryptedResponse = await reader.ReadLineAsync();
-            if (string.IsNullOrEmpty(encryptedResponse))
-                return null;
+                var encryptedResponse = await _reader.ReadLineAsync();
+                if (string.IsNullOrEmpty(encryptedResponse))
+                    return null;
 
-            var decrypted = EncryptionHelper.Decrypt(encryptedResponse);
-            return decrypted;
+                var decrypted = EncryptionHelper.Decrypt(encryptedResponse);
+                return decrypted;
+            }
+            finally
+            {
+                _sendLock.Release();
+            }
         }
 
         /// <summary>
@@ -239,6 +339,24 @@ namespace ChatClient.Services
             var request = new ChatRequest
             {
                 Action = "GetConversations",
+                SenderUsername = currentUser.Username,
+                ClearanceLevel = currentUser.ClearanceLevel
+            };
+
+            var responseJson = await SendRequestAsync(request);
+            if (responseJson == null) return null;
+
+            return JsonSerializer.Deserialize<ServerResponse>(responseJson);
+        }
+
+        /// <summary>
+        /// Lấy danh sách người dùng để chat (trừ user hiện tại).
+        /// </summary>
+        public async Task<ServerResponse?> GetUsersForChatAsync(User currentUser)
+        {
+            var request = new ChatRequest
+            {
+                Action = "GetUsersForChat",
                 SenderUsername = currentUser.Username,
                 ClearanceLevel = currentUser.ClearanceLevel
             };
@@ -466,6 +584,44 @@ namespace ChatClient.Services
         }
 
         /// <summary>
+        /// Rời khỏi cuộc trò chuyện (xóa phía mình).
+        /// </summary>
+        public async Task<ServerResponse?> LeaveConversationAsync(User currentUser, string conversationId)
+        {
+            var request = new ChatRequest
+            {
+                Action = "LeaveConversation",
+                SenderUsername = currentUser.Username,
+                ConversationId = conversationId,
+                ClearanceLevel = currentUser.ClearanceLevel
+            };
+
+            var responseJson = await SendRequestAsync(request);
+            if (responseJson == null) return null;
+
+            return JsonSerializer.Deserialize<ServerResponse>(responseJson);
+        }
+
+        /// <summary>
+        /// Xóa cuộc trò chuyện (chủ nhóm xóa).
+        /// </summary>
+        public async Task<ServerResponse?> DeleteConversationAsync(User currentUser, string conversationId)
+        {
+            var request = new ChatRequest
+            {
+                Action = "DeleteConversation",
+                SenderUsername = currentUser.Username,
+                ConversationId = conversationId,
+                ClearanceLevel = currentUser.ClearanceLevel
+            };
+
+            var responseJson = await SendRequestAsync(request);
+            if (responseJson == null) return null;
+
+            return JsonSerializer.Deserialize<ServerResponse>(responseJson);
+        }
+
+        /// <summary>
         /// Thăng cấp thành viên (promote).
         /// </summary>
         public async Task<ServerResponse?> PromoteMemberAsync(User currentUser, string conversationId, string targetUsername)
@@ -487,17 +643,47 @@ namespace ChatClient.Services
         }
 
         /// <summary>
-        /// Tải file đính kèm lên server.
+        /// Tải file đính kèm lên server (từ đường dẫn).
         /// </summary>
         public async Task<ServerResponse?> UploadAttachmentAsync(User currentUser, string filePath)
         {
-            // Note: This would need file upload implementation
-            // For now, return a placeholder
-            return new ServerResponse
+            if (!File.Exists(filePath))
             {
-                Success = false,
-                Message = "File upload not yet implemented"
+                return new ServerResponse
+                {
+                    Success = false,
+                    Message = "File không tồn tại."
+                };
+            }
+
+            var bytes = await File.ReadAllBytesAsync(filePath);
+            var fileName = Path.GetFileName(filePath);
+            return await UploadAttachmentAsync(currentUser, fileName, bytes);
+        }
+
+        /// <summary>
+        /// Tải file đính kèm lên server (từ bytes).
+        /// </summary>
+        public async Task<ServerResponse?> UploadAttachmentAsync(User currentUser, string fileName, byte[] bytes)
+        {
+            var mimeType = GetMimeTypeFromFileName(fileName);
+
+            var request = new ChatRequest
+            {
+                Action = "UploadAttachment",
+                SenderUsername = currentUser.Username,
+                Content = Convert.ToBase64String(bytes),
+                FileName = fileName,
+                MimeType = mimeType,
+                FileSize = bytes.LongLength,
+                SecurityLabel = currentUser.ClearanceLevel,
+                ClearanceLevel = currentUser.ClearanceLevel
             };
+
+            var responseJson = await SendRequestAsync(request);
+            if (responseJson == null) return null;
+
+            return JsonSerializer.Deserialize<ServerResponse>(responseJson);
         }
 
         /// <summary>
@@ -505,12 +691,21 @@ namespace ChatClient.Services
         /// </summary>
         public async Task<ServerResponse?> SendMessageWithAttachmentAsync(User currentUser, string conversationId, string content, int securityLabel, int attachmentId)
         {
-            // Note: This would need attachment support in the server
-            return new ServerResponse
+            var request = new ChatRequest
             {
-                Success = false,
-                Message = "Attachment support not yet implemented"
+                Action = "SendMessageWithAttachment",
+                SenderUsername = currentUser.Username,
+                ConversationId = conversationId,
+                Content = content,
+                SecurityLabel = securityLabel,
+                ClearanceLevel = currentUser.ClearanceLevel,
+                AttachmentId = attachmentId
             };
+
+            var responseJson = await SendRequestAsync(request);
+            if (responseJson == null) return null;
+
+            return JsonSerializer.Deserialize<ServerResponse>(responseJson);
         }
 
         /// <summary>
@@ -518,12 +713,126 @@ namespace ChatClient.Services
         /// </summary>
         public async Task<ServerResponse?> DeleteMessageAsync(User currentUser, string messageId)
         {
-            // Note: This would need a new server action "DeleteMessage"
-            return new ServerResponse
+            if (!int.TryParse(messageId, out var msgId))
             {
-                Success = false,
-                Message = "Delete message not yet implemented"
+                return new ServerResponse
+                {
+                    Success = false,
+                    Message = "Invalid message ID."
+                };
+            }
+
+            var request = new ChatRequest
+            {
+                Action = "DeleteMessage",
+                SenderUsername = currentUser.Username,
+                MessageId = msgId,
+                ClearanceLevel = currentUser.ClearanceLevel
             };
+
+            var responseJson = await SendRequestAsync(request);
+            if (responseJson == null) return null;
+
+            return JsonSerializer.Deserialize<ServerResponse>(responseJson);
+        }
+
+        // ============================================================================
+        // GROUP/CONVERSATION MANAGEMENT METHODS
+        // ============================================================================
+
+        /// <summary>
+        /// Rời nhóm (không phải owner)
+        /// </summary>
+        public async Task<ServerResponse?> LeaveGroupAsync(User currentUser, string conversationId)
+        {
+            var request = new ChatRequest
+            {
+                Action = "LeaveGroup",
+                SenderUsername = currentUser.Username,
+                ConversationId = conversationId,
+                ClearanceLevel = currentUser.ClearanceLevel
+            };
+
+            var responseJson = await SendRequestAsync(request);
+            if (responseJson == null) return null;
+
+            return JsonSerializer.Deserialize<ServerResponse>(responseJson);
+        }
+
+        /// <summary>
+        /// Xóa chat riêng tư một phía
+        /// </summary>
+        public async Task<ServerResponse?> DeletePrivateChatOneSideAsync(User currentUser, string conversationId)
+        {
+            var request = new ChatRequest
+            {
+                Action = "DeletePrivateChatOneSide",
+                SenderUsername = currentUser.Username,
+                ConversationId = conversationId,
+                ClearanceLevel = currentUser.ClearanceLevel
+            };
+
+            var responseJson = await SendRequestAsync(request);
+            if (responseJson == null) return null;
+
+            return JsonSerializer.Deserialize<ServerResponse>(responseJson);
+        }
+
+        /// <summary>
+        /// Xóa/Archive nhóm (chỉ owner)
+        /// </summary>
+        public async Task<ServerResponse?> DeleteGroupAsync(User currentUser, string conversationId)
+        {
+            var request = new ChatRequest
+            {
+                Action = "DeleteGroup",
+                SenderUsername = currentUser.Username,
+                ConversationId = conversationId,
+                ClearanceLevel = currentUser.ClearanceLevel
+            };
+
+            var responseJson = await SendRequestAsync(request);
+            if (responseJson == null) return null;
+
+            return JsonSerializer.Deserialize<ServerResponse>(responseJson);
+        }
+
+        /// <summary>
+        /// Xóa archive (nhóm đã archive)
+        /// </summary>
+        public async Task<ServerResponse?> DeleteArchiveAsync(User currentUser, string conversationId)
+        {
+            var request = new ChatRequest
+            {
+                Action = "DeleteArchive",
+                SenderUsername = currentUser.Username,
+                ConversationId = conversationId,
+                ClearanceLevel = currentUser.ClearanceLevel
+            };
+
+            var responseJson = await SendRequestAsync(request);
+            if (responseJson == null) return null;
+
+            return JsonSerializer.Deserialize<ServerResponse>(responseJson);
+        }
+
+        /// <summary>
+        /// Kiểm tra trạng thái cuộc trò chuyện
+        /// </summary>
+        public async Task<ServerResponse?> GetConversationStatusAsync(User currentUser, string conversationId)
+        {
+            var request = new ChatRequest
+            {
+                Action = "GetConversationStatus",
+                SenderUsername = currentUser.Username,
+                ConversationId = conversationId,
+                ClearanceLevel = currentUser.ClearanceLevel
+            };
+
+            var responseJson = await SendRequestAsync(request);
+            if (responseJson == null) return null;
+
+            return JsonSerializer.Deserialize<ServerResponse>(responseJson);
         }
 
         public void Dispose()
@@ -554,6 +863,13 @@ namespace ChatClient.Services
         public string ConversationName { get; set; } = string.Empty; // TENCTC
         public bool IsPrivateConversation { get; set; }
         public string TargetUsername { get; set; } = string.Empty; // MATK của người dùng đích
+        public int Limit { get; set; }
+        public int MessageId { get; set; }
+        // Attachment fields
+        public string FileName { get; set; } = string.Empty;
+        public string MimeType { get; set; } = string.Empty;
+        public long FileSize { get; set; }
+        public int AttachmentId { get; set; }
     }
 
     /// <summary>
@@ -570,6 +886,20 @@ namespace ChatClient.Services
         public string ConversationId { get; set; } = string.Empty;
         public int MessageId { get; set; }
         public int AttachmentId { get; set; }
+        public string AttachmentFileName { get; set; } = string.Empty;
+        public string AttachmentMimeType { get; set; } = string.Empty;
+        public string AttachmentContentBase64 { get; set; } = string.Empty;
+        public AdminUserDto? AdminUser { get; set; }
+        public string[] UserList { get; set; } = Array.Empty<string>();
+        public ConversationStatusDto? ConversationStatus { get; set; }
+    }
+
+    public class ConversationStatusDto
+    {
+        public string Status { get; set; } = string.Empty; // ACTIVE, ARCHIVED, DELETED_BY_ME, NOT_FOUND
+        public bool IsPrivate { get; set; }
+        public bool IsArchived { get; set; }
+        public bool IsOwner { get; set; }
     }
 
     public class ChatMessageDto
@@ -600,6 +930,20 @@ namespace ChatClient.Services
         public bool IsBanned { get; set; } // IS_BANNED
         public bool IsMuted { get; set; } // IS_MUTED
         public DateTime JoinedDate { get; set; } // NGAYTHAMGIA
+    }
+
+    public class AdminUserDto
+    {
+        public string Matk { get; set; } = string.Empty;
+        public string Username { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Hovaten { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        public int ClearanceLevel { get; set; }
+        public bool IsBannedGlobal { get; set; }
+        public string Mavaitro { get; set; } = string.Empty;
+        public DateTime NgayTao { get; set; }
+        public bool IsOtpVerified { get; set; }
     }
 }
 

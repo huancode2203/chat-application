@@ -1,6 +1,8 @@
 using System;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.IO;
+using System.Text.Json;
 using ChatClient.Models;
 using ChatClient.Services;
 using ChatClient.Utils;
@@ -17,12 +19,72 @@ namespace ChatClient.Forms
     public partial class LoginForm : Form
     {
         private string _currentCaptcha = string.Empty;
+        private CheckBox? chkRememberMe;
+        private CheckBox? chkShowPassword;
+        private string _loginStorePath = string.Empty;
 
         public LoginForm()
         {
             InitializeComponent();
+            SetupModernUI();
             SetupEventHandlers();
+            InitializeExtraControls();
+            LoadRememberedCredentials();
             LoadCaptcha();
+        }
+
+        private void SetupModernUI()
+        {
+            // Modern form styling
+            this.BackColor = System.Drawing.Color.FromArgb(245, 247, 250);
+            this.Font = new System.Drawing.Font("Segoe UI", 9F);
+            
+            if (this.Text == "LoginForm")
+                this.Text = "Đăng nhập - Chat Application";
+
+            // Style buttons with modern colors
+            if (btnLogin != null)
+            {
+                btnLogin.BackColor = System.Drawing.Color.FromArgb(0, 132, 255);
+                btnLogin.ForeColor = System.Drawing.Color.White;
+                btnLogin.FlatStyle = FlatStyle.Flat;
+                btnLogin.FlatAppearance.BorderSize = 0;
+                btnLogin.Cursor = Cursors.Hand;
+                btnLogin.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Bold);
+            }
+
+            if (btnRegister != null)
+            {
+                btnRegister.BackColor = System.Drawing.Color.FromArgb(40, 167, 69);
+                btnRegister.ForeColor = System.Drawing.Color.White;
+                btnRegister.FlatStyle = FlatStyle.Flat;
+                btnRegister.FlatAppearance.BorderSize = 0;
+                btnRegister.Cursor = Cursors.Hand;
+            }
+
+            if (btnForgotPassword != null)
+            {                btnForgotPassword.BackColor = System.Drawing.Color.FromArgb(108, 117, 125);
+                btnForgotPassword.ForeColor = System.Drawing.Color.White;
+                btnForgotPassword.FlatStyle = FlatStyle.Flat;
+                btnForgotPassword.FlatAppearance.BorderSize = 0;
+                btnForgotPassword.Cursor = Cursors.Hand;
+            }
+
+            if (btnRefreshCaptcha != null)
+            {
+                btnRefreshCaptcha.BackColor = System.Drawing.Color.FromArgb(255, 193, 7);
+                btnRefreshCaptcha.ForeColor = System.Drawing.Color.Black;
+                btnRefreshCaptcha.FlatStyle = FlatStyle.Flat;
+                btnRefreshCaptcha.FlatAppearance.BorderSize = 0;
+                btnRefreshCaptcha.Cursor = Cursors.Hand;
+                btnRefreshCaptcha.Text = "🔄 Tải lại";
+            }
+
+            if (lblStatus != null)
+            {
+                lblStatus.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Italic);
+                lblStatus.ForeColor = System.Drawing.Color.FromArgb(220, 53, 69);
+            }
         }
 
         private void SetupEventHandlers()
@@ -49,6 +111,100 @@ namespace ChatClient.Forms
                     btnLogin.PerformClick();
                 }
             };
+        }
+
+        private void InitializeExtraControls()
+        {
+            var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            var dir = Path.Combine(appData, "ChatApplication");
+            try { Directory.CreateDirectory(dir); } catch { }
+            _loginStorePath = Path.Combine(dir, "login.json");
+
+            chkRememberMe = new CheckBox
+            {
+                Text = "Ghi nhớ tôi",
+                AutoSize = true
+            };
+
+            chkShowPassword = new CheckBox
+            {
+                Text = "Hiển thị mật khẩu",
+                AutoSize = true
+            };
+
+            try
+            {
+                txtPassword.UseSystemPasswordChar = true;
+            }
+            catch { }
+
+            chkShowPassword.CheckedChanged += (_, _) =>
+            {
+                try { txtPassword.UseSystemPasswordChar = !chkShowPassword.Checked; } catch { }
+            };
+
+            this.KeyPreview = true;
+            this.KeyDown += (s, e) =>
+            {
+                if (e.KeyCode == Keys.Enter)
+                {
+                    e.Handled = true;
+                    btnLogin.PerformClick();
+                }
+            };
+
+            try
+            {
+                if (txtPassword != null)
+                {
+                    chkShowPassword.Location = new System.Drawing.Point(txtPassword.Right - 140, txtPassword.Top + 3);
+                    chkShowPassword.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+                    this.Controls.Add(chkShowPassword);
+                }
+
+                if (btnLogin != null)
+                {
+                    chkRememberMe.Location = new System.Drawing.Point(btnLogin.Left, btnLogin.Bottom + 8);
+                    chkRememberMe.Anchor = AnchorStyles.Top | AnchorStyles.Left;
+                    this.Controls.Add(chkRememberMe);
+                }
+            }
+            catch { }
+        }
+
+        private void LoadRememberedCredentials()
+        {
+            try
+            {
+                if (File.Exists(_loginStorePath))
+                {
+                    var json = File.ReadAllText(_loginStorePath);
+                    var data = JsonSerializer.Deserialize<LoginData>(json);
+                    if (data != null && !string.IsNullOrWhiteSpace(data.Username))
+                    {
+                        txtUsername.Text = data.Username;
+                        if (chkRememberMe != null) chkRememberMe.Checked = true;
+                    }
+                }
+            }
+            catch { }
+        }
+
+        private void SaveOrClearRemembered(string username)
+        {
+            try
+            {
+                if (chkRememberMe != null && chkRememberMe.Checked)
+                {
+                    var json = JsonSerializer.Serialize(new LoginData { Username = username });
+                    File.WriteAllText(_loginStorePath, json);
+                }
+                else
+                {
+                    if (File.Exists(_loginStorePath)) File.Delete(_loginStorePath);
+                }
+            }
+            catch { }
         }
 
         private void LoadCaptcha()
@@ -97,8 +253,21 @@ namespace ChatClient.Forms
                 if (response == null || !response.Success)
                 {
                     var errorMessage = response?.Message ?? "Lỗi kết nối server.";
-                    lblStatus.Text = errorMessage;
                     
+                    // Check if user is banned
+                    if (errorMessage.Contains("bị cấm") || errorMessage.Contains("banned") || errorMessage.Contains("bị khóa"))
+                    {
+                        lblStatus.Text = "❌ Tài khoản của bạn đã bị khóa!";
+                        MessageBox.Show("Tài khoản của bạn đã bị quản trị viên khóa.\nVui lòng liên hệ admin để biết thêm chi tiết.",
+                                      "Tài khoản bị khóa",
+                                      MessageBoxButtons.OK,
+                                      MessageBoxIcon.Stop);
+                        btnLogin.Enabled = true;
+                        return;
+                    }
+                    
+                    lblStatus.Text = errorMessage;
+
                     // Nếu lỗi là chưa verify OTP, hỏi user có muốn verify không
                     if (errorMessage.Contains("verify") || errorMessage.Contains("OTP") || errorMessage.Contains("xác minh"))
                     {
@@ -107,7 +276,7 @@ namespace ChatClient.Forms
                             "Chưa xác minh OTP",
                             MessageBoxButtons.YesNo,
                             MessageBoxIcon.Question);
-                        
+
                         if (result == DialogResult.Yes)
                         {
                             var verifyForm = new VerifyOtpForm(username);
@@ -117,12 +286,15 @@ namespace ChatClient.Forms
                             return;
                         }
                     }
-                    
+
                     btnLogin.Enabled = true;
                     return;
                 }
 
                 // Đăng nhập thành công
+                lblStatus.Text = "✓ Đăng nhập thành công!";
+                lblStatus.ForeColor = System.Drawing.Color.FromArgb(40, 167, 69);
+                
                 var user = new User
                 {
                     Matk = username, // MATK = TENTK trong trường hợp này
@@ -131,7 +303,12 @@ namespace ChatClient.Forms
                     ClearanceLevel = response.ClearanceLevel
                 };
 
-                var chatForm = new ChatForm(user);
+                SaveOrClearRemembered(username);
+
+                // Small delay for UX
+                await Task.Delay(300);
+                
+                var chatForm = new ChatFormNew(user);
                 chatForm.FormClosed += (_, _) => Close();
                 chatForm.Show();
                 Hide();
@@ -153,6 +330,11 @@ namespace ChatClient.Forms
         {
             var forgotForm = new ForgotPasswordForm();
             forgotForm.ShowDialog();
+        }
+
+        private class LoginData
+        {
+            public string Username { get; set; } = string.Empty;
         }
     }
 }

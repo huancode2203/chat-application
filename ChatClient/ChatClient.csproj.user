@@ -2,7 +2,31 @@
 <Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup />
   <ItemGroup>
+    <Compile Update="Controls\ChatPanel.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Update="Controls\DoubleBufferedListView.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Update="Controls\MessageBubble.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="Forms\ChatForm.Attachments.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Forms\ChatForm.Bubbles.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Update="Forms\ChatForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Forms\ChatForm.Features.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Forms\ChatForm.UIEnhancements.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Forms\ChatFormNew.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Update="Forms\CreateGroupDialog.cs">
@@ -14,13 +38,19 @@
     <Compile Update="Forms\LoginForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Update="Forms\MemberDialog.cs">
+    <Compile Update="Forms\MembersDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Forms\ProgressDialog.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Update="Forms\RegisterForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Update="Forms\ResetPasswordForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Forms\UserProfileForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Update="Forms\VerifyOtpForm.cs">

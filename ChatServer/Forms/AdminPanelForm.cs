@@ -54,8 +54,33 @@ namespace ChatServer.Forms
             btnDeleteMessage.Click += async (_, _) => await DeleteMessageAsync();
 
             btnRefreshLogs.Click += async (_, _) => await LoadAuditLogsAsync();
+            
+            // Policy Management button (add to designer first)
+            try
+            {
+                var btnPolicyMgmt = this.Controls.Find("btnPolicyManagement", true).FirstOrDefault() as Button;
+                if (btnPolicyMgmt != null)
+                {
+                    btnPolicyMgmt.Click += (_, _) => OpenPolicyManagement();
+                }
+            }
+            catch { }
 
             tabControl.SelectedIndexChanged += async (_, _) => await OnTabChangedAsync();
+        }
+
+        private void OpenPolicyManagement()
+        {
+            try
+            {
+                using var policyForm = new VPDPolicyManagementForm(_dbContext, _adminUsername);
+                policyForm.ShowDialog(this);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi mở VPD/RLS/FGA Policy Management: {ex.Message}\n\nChi tiết: {ex.StackTrace}", "Lỗi",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private async Task OnTabChangedAsync()
@@ -131,17 +156,52 @@ namespace ChatServer.Forms
             if (string.IsNullOrEmpty(username))
                 return;
 
-            if (MessageBox.Show($"Bạn có chắc chắn muốn xóa user '{username}'?", "Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            if (MessageBox.Show($"Bạn có chắc chắn muốn xóa user '{username}'?\n\nLưu ý: Tất cả dữ liệu liên quan sẽ bị xóa!", "Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
             {
                 try
                 {
-                    using var cmd = _dbContext.Connection.CreateCommand();
-                    cmd.CommandText = "BEGIN SP_XOA_TAIKHOAN_TOAN_BO(:p_matk); END;";
-                    cmd.CommandType = System.Data.CommandType.Text;
-                    cmd.Parameters.Add(new Oracle.ManagedDataAccess.Client.OracleParameter("p_matk", Oracle.ManagedDataAccess.Client.OracleDbType.Varchar2) { Value = username });
-                    await cmd.ExecuteNonQueryAsync();
+                    // Get MATK from username first
+                    string matk = username;
+                    using (var lookupCmd = _dbContext.Connection.CreateCommand())
+                    {
+                        lookupCmd.CommandText = "SELECT MATK FROM TAIKHOAN WHERE MATK = :p_value OR TENTK = :p_value";
+                        lookupCmd.Parameters.Add(new Oracle.ManagedDataAccess.Client.OracleParameter("p_value", Oracle.ManagedDataAccess.Client.OracleDbType.Varchar2) { Value = username });
+                        var result = await lookupCmd.ExecuteScalarAsync();
+                        if (result != null && result != DBNull.Value)
+                            matk = result.ToString()!;
+                    }
 
-                    await _dbContext.WriteAuditLogAsync(_adminUsername, "ADMIN_DELETE_USER", username, 0);
+                    // Delete from child tables in correct order (due to FK constraints)
+                    var deleteCommands = new[] {
+                        "DELETE FROM XACTHUCOTP WHERE MATK = :p",
+                        "DELETE FROM AUDIT_LOGS WHERE MATK = :p",
+                        "DELETE FROM USER_SETTINGS WHERE MATK = :p",
+                        "DELETE FROM ENCRYPTION_KEYS WHERE MATK = :p",
+                        "DELETE FROM TINNHAN_ATTACH WHERE MATN IN (SELECT MATN FROM TINNHAN WHERE MATK = :p)",
+                        "DELETE FROM ATTACHMENT WHERE MATK = :p",
+                        "DELETE FROM TINNHAN WHERE MATK = :p",
+                        "DELETE FROM THANHVIEN WHERE MATK = :p",
+                        "DELETE FROM NGUOIDUNG WHERE MATK = :p",
+                        "UPDATE CUOCTROCHUYEN SET NGUOIQL = NULL WHERE NGUOIQL = :p",
+                        "DELETE FROM TAIKHOAN WHERE MATK = :p"
+                    };
+
+                    foreach (var sql in deleteCommands)
+                    {
+                        try
+                        {
+                            using var cmd = _dbContext.Connection.CreateCommand();
+                            cmd.CommandText = sql;
+                            cmd.Parameters.Add(new Oracle.ManagedDataAccess.Client.OracleParameter("p", Oracle.ManagedDataAccess.Client.OracleDbType.Varchar2) { Value = matk });
+                            await cmd.ExecuteNonQueryAsync();
+                        }
+                        catch (Exception tableEx)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[DeleteUser] Error: {tableEx.Message}");
+                        }
+                    }
+
+                    await _dbContext.WriteAuditLogAsync(_adminUsername, "ADMIN_DELETE_USER", $"Deleted: {username} (MATK: {matk})", 0);
                     MessageBox.Show("User deleted successfully.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     await LoadUsersAsync();
                 }
@@ -358,23 +418,45 @@ namespace ChatServer.Forms
                 }
 
                 btnRefreshLogs.Enabled = false;
-                var logs = await Task.Run(() => _dbContext.GetAuditLogsAsync(100).Result);
                 
-                dgvAuditLogs.DataSource = logs.Select(l => new
+                var logs = await Task.Run(async () =>
                 {
-                    l.LogId,
-                    l.Matk,
-                    l.Action,
-                    l.Target,
-                    SecurityLabel = l.SecurityLabel,
-                    l.Timestamp
-                }).ToList();
+                    try
+                    {
+                        return await _dbContext.GetAuditLogsAsync(100);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"GetAuditLogsAsync error: {ex.Message}");
+                        return new System.Collections.Generic.List<AuditLogInfo>();
+                    }
+                });
+                
+                if (logs != null && logs.Count > 0)
+                {
+                    dgvAuditLogs.DataSource = logs.Select(l => new
+                    {
+                        ID = l.LogId,
+                        User = l.Matk ?? "N/A",
+                        Action = l.Action ?? "N/A",
+                        Target = l.Target ?? "N/A",
+                        Level = l.SecurityLabel,
+                        Time = l.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")
+                    }).ToList();
+                }
+                else
+                {
+                    dgvAuditLogs.DataSource = null;
+                    MessageBox.Show("Không có audit log nào hoặc xảy ra lỗi khi tải.", "Thông báo",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
                 
                 btnRefreshLogs.Enabled = true;
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Lỗi tải audit logs: {ex.Message}\n\nChi tiết: {ex.StackTrace}", "Lỗi",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
                 btnRefreshLogs.Enabled = true;
             }
         }

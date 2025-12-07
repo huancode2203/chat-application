@@ -4,9 +4,10 @@ namespace ChatClient.Forms
     {
         private System.ComponentModel.IContainer components = null;
         private System.Windows.Forms.Label lblTitle;
+        private System.Windows.Forms.Label lblUsername;
         private System.Windows.Forms.TextBox txtUsername;
+        private System.Windows.Forms.Label lblPassword;
         private System.Windows.Forms.TextBox txtPassword;
-        private System.Windows.Forms.CheckBox chkGraduated;
         private System.Windows.Forms.Label lblCaptcha;
         private System.Windows.Forms.TextBox txtCaptcha;
         private System.Windows.Forms.Button btnRefreshCaptcha;
@@ -34,195 +35,219 @@ namespace ChatClient.Forms
 
         private void InitializeComponent()
         {
-            this.pnlMain = new System.Windows.Forms.Panel();
-            this.lblTitle = new System.Windows.Forms.Label();
-            this.txtUsername = new System.Windows.Forms.TextBox();
-            this.txtPassword = new System.Windows.Forms.TextBox();
-            this.chkGraduated = new System.Windows.Forms.CheckBox();
-            this.lblCaptcha = new System.Windows.Forms.Label();
-            this.txtCaptcha = new System.Windows.Forms.TextBox();
-            this.btnRefreshCaptcha = new System.Windows.Forms.Button();
-            this.picCaptcha = new System.Windows.Forms.PictureBox();
-            this.btnLogin = new System.Windows.Forms.Button();
-            this.lblStatus = new System.Windows.Forms.Label();
-            this.btnRegister = new System.Windows.Forms.Button();
-            this.btnForgotPassword = new System.Windows.Forms.Button();
-            this.pnlMain.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.picCaptcha)).BeginInit();
-            this.SuspendLayout();
+            pnlMain = new Panel();
+            btnForgotPassword = new Button();
+            btnRegister = new Button();
+            lblStatus = new Label();
+            btnLogin = new Button();
+            picCaptcha = new PictureBox();
+            btnRefreshCaptcha = new Button();
+            txtCaptcha = new TextBox();
+            lblCaptcha = new Label();
+            lblPassword = new Label();
+            txtPassword = new TextBox();
+            lblUsername = new Label();
+            txtUsername = new TextBox();
+            lblTitle = new Label();
+            pnlMain.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)picCaptcha).BeginInit();
+            SuspendLayout();
             // 
             // pnlMain
             // 
-            this.pnlMain.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(240)))), ((int)(((byte)(248)))), ((int)(((byte)(255)))));
-            this.pnlMain.Controls.Add(this.btnForgotPassword);
-            this.pnlMain.Controls.Add(this.btnRegister);
-            this.pnlMain.Controls.Add(this.lblStatus);
-            this.pnlMain.Controls.Add(this.btnLogin);
-            this.pnlMain.Controls.Add(this.picCaptcha);
-            this.pnlMain.Controls.Add(this.btnRefreshCaptcha);
-            this.pnlMain.Controls.Add(this.txtCaptcha);
-            this.pnlMain.Controls.Add(this.lblCaptcha);
-            this.pnlMain.Controls.Add(this.chkGraduated);
-            this.pnlMain.Controls.Add(this.txtPassword);
-            this.pnlMain.Controls.Add(this.txtUsername);
-            this.pnlMain.Controls.Add(this.lblTitle);
-            this.pnlMain.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.pnlMain.Location = new System.Drawing.Point(0, 0);
-            this.pnlMain.Name = "pnlMain";
-            this.pnlMain.Size = new System.Drawing.Size(500, 450);
-            this.pnlMain.TabIndex = 0;
-            // 
-            // lblTitle
-            // 
-            this.lblTitle.AutoSize = true;
-            this.lblTitle.Font = new System.Drawing.Font("Arial", 16F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
-            this.lblTitle.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(102)))), ((int)(((byte)(204)))));
-            this.lblTitle.Location = new System.Drawing.Point(140, 30);
-            this.lblTitle.Name = "lblTitle";
-            this.lblTitle.Size = new System.Drawing.Size(220, 26);
-            this.lblTitle.TabIndex = 0;
-            this.lblTitle.Text = "ĐĂNG NHẬP HỆ THỐNG";
-            // 
-            // txtUsername
-            // 
-            this.txtUsername.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.txtUsername.Font = new System.Drawing.Font("Arial", 11F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.txtUsername.Location = new System.Drawing.Point(100, 100);
-            this.txtUsername.Name = "txtUsername";
-            this.txtUsername.Size = new System.Drawing.Size(300, 24);
-            this.txtUsername.TabIndex = 1;
-            // 
-            // txtPassword
-            // 
-            this.txtPassword.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.txtPassword.Font = new System.Drawing.Font("Arial", 11F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.txtPassword.Location = new System.Drawing.Point(100, 140);
-            this.txtPassword.Name = "txtPassword";
-            this.txtPassword.PasswordChar = '●';
-            this.txtPassword.Size = new System.Drawing.Size(300, 24);
-            this.txtPassword.TabIndex = 2;
-            // 
-            // chkGraduated
-            // 
-            this.chkGraduated.AutoSize = true;
-            this.chkGraduated.Font = new System.Drawing.Font("Arial", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.chkGraduated.Location = new System.Drawing.Point(420, 142);
-            this.chkGraduated.Name = "chkGraduated";
-            this.chkGraduated.Size = new System.Drawing.Size(100, 20);
-            this.chkGraduated.TabIndex = 3;
-            this.chkGraduated.Text = "Đã tốt nghiệp";
-            this.chkGraduated.UseVisualStyleBackColor = true;
-            // 
-            // lblCaptcha
-            // 
-            this.lblCaptcha.AutoSize = true;
-            this.lblCaptcha.Font = new System.Drawing.Font("Arial", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.lblCaptcha.ForeColor = System.Drawing.Color.Gray;
-            this.lblCaptcha.Location = new System.Drawing.Point(100, 190);
-            this.lblCaptcha.Name = "lblCaptcha";
-            this.lblCaptcha.Size = new System.Drawing.Size(70, 16);
-            this.lblCaptcha.TabIndex = 4;
-            this.lblCaptcha.Text = "Nhập mã:";
-            // 
-            // txtCaptcha
-            // 
-            this.txtCaptcha.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.txtCaptcha.Font = new System.Drawing.Font("Arial", 11F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.txtCaptcha.Location = new System.Drawing.Point(100, 210);
-            this.txtCaptcha.Name = "txtCaptcha";
-            this.txtCaptcha.Size = new System.Drawing.Size(120, 24);
-            this.txtCaptcha.TabIndex = 5;
-            // 
-            // btnRefreshCaptcha
-            // 
-            this.btnRefreshCaptcha.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(152)))), ((int)(((byte)(0)))));
-            this.btnRefreshCaptcha.FlatAppearance.BorderSize = 0;
-            this.btnRefreshCaptcha.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnRefreshCaptcha.Font = new System.Drawing.Font("Arial", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
-            this.btnRefreshCaptcha.ForeColor = System.Drawing.Color.White;
-            this.btnRefreshCaptcha.Location = new System.Drawing.Point(230, 210);
-            this.btnRefreshCaptcha.Name = "btnRefreshCaptcha";
-            this.btnRefreshCaptcha.Size = new System.Drawing.Size(30, 30);
-            this.btnRefreshCaptcha.TabIndex = 6;
-            this.btnRefreshCaptcha.Text = "↻";
-            this.btnRefreshCaptcha.UseVisualStyleBackColor = false;
-            // 
-            // picCaptcha
-            // 
-            this.picCaptcha.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.picCaptcha.Location = new System.Drawing.Point(270, 210);
-            this.picCaptcha.Name = "picCaptcha";
-            this.picCaptcha.Size = new System.Drawing.Size(120, 40);
-            this.picCaptcha.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
-            this.picCaptcha.TabIndex = 7;
-            this.picCaptcha.TabStop = false;
-            // 
-            // btnLogin
-            // 
-            this.btnLogin.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(152)))), ((int)(((byte)(0)))));
-            this.btnLogin.FlatAppearance.BorderSize = 0;
-            this.btnLogin.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnLogin.Font = new System.Drawing.Font("Arial", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
-            this.btnLogin.ForeColor = System.Drawing.Color.White;
-            this.btnLogin.Location = new System.Drawing.Point(100, 280);
-            this.btnLogin.Name = "btnLogin";
-            this.btnLogin.Size = new System.Drawing.Size(300, 45);
-            this.btnLogin.TabIndex = 8;
-            this.btnLogin.Text = "ĐĂNG NHẬP";
-            this.btnLogin.UseVisualStyleBackColor = false;
-            // 
-            // lblStatus
-            // 
-            this.lblStatus.AutoSize = true;
-            this.lblStatus.ForeColor = System.Drawing.Color.Red;
-            this.lblStatus.Location = new System.Drawing.Point(100, 340);
-            this.lblStatus.Name = "lblStatus";
-            this.lblStatus.Size = new System.Drawing.Size(0, 15);
-            this.lblStatus.TabIndex = 9;
-            // 
-            // btnRegister
-            // 
-            this.btnRegister.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(102)))), ((int)(((byte)(204)))));
-            this.btnRegister.FlatAppearance.BorderSize = 0;
-            this.btnRegister.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnRegister.Font = new System.Drawing.Font("Arial", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.btnRegister.ForeColor = System.Drawing.Color.White;
-            this.btnRegister.Location = new System.Drawing.Point(100, 380);
-            this.btnRegister.Name = "btnRegister";
-            this.btnRegister.Size = new System.Drawing.Size(140, 35);
-            this.btnRegister.TabIndex = 10;
-            this.btnRegister.Text = "Đăng ký";
-            this.btnRegister.UseVisualStyleBackColor = false;
+            pnlMain.BackColor = Color.FromArgb(245, 247, 250);
+            pnlMain.Controls.Add(btnForgotPassword);
+            pnlMain.Controls.Add(btnRegister);
+            pnlMain.Controls.Add(lblStatus);
+            pnlMain.Controls.Add(btnLogin);
+            pnlMain.Controls.Add(picCaptcha);
+            pnlMain.Controls.Add(btnRefreshCaptcha);
+            pnlMain.Controls.Add(txtCaptcha);
+            pnlMain.Controls.Add(lblCaptcha);
+            pnlMain.Controls.Add(lblPassword);
+            pnlMain.Controls.Add(txtPassword);
+            pnlMain.Controls.Add(lblUsername);
+            pnlMain.Controls.Add(txtUsername);
+            pnlMain.Controls.Add(lblTitle);
+            pnlMain.Dock = DockStyle.Fill;
+            pnlMain.Location = new Point(0, 0);
+            pnlMain.Margin = new Padding(4, 5, 4, 5);
+            pnlMain.Name = "pnlMain";
+            pnlMain.Size = new Size(714, 750);
+            pnlMain.TabIndex = 0;
             // 
             // btnForgotPassword
             // 
-            this.btnForgotPassword.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(100)))), ((int)(((byte)(100)))), ((int)(((byte)(100)))));
-            this.btnForgotPassword.FlatAppearance.BorderSize = 0;
-            this.btnForgotPassword.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnForgotPassword.Font = new System.Drawing.Font("Arial", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.btnForgotPassword.ForeColor = System.Drawing.Color.White;
-            this.btnForgotPassword.Location = new System.Drawing.Point(260, 380);
-            this.btnForgotPassword.Name = "btnForgotPassword";
-            this.btnForgotPassword.Size = new System.Drawing.Size(140, 35);
-            this.btnForgotPassword.TabIndex = 11;
-            this.btnForgotPassword.Text = "Quên mật khẩu";
-            this.btnForgotPassword.UseVisualStyleBackColor = false;
+            btnForgotPassword.BackColor = Color.FromArgb(100, 100, 100);
+            btnForgotPassword.FlatAppearance.BorderSize = 0;
+            btnForgotPassword.FlatStyle = FlatStyle.Flat;
+            btnForgotPassword.Font = new Font("Arial", 10F);
+            btnForgotPassword.ForeColor = Color.White;
+            btnForgotPassword.Location = new Point(371, 576);
+            btnForgotPassword.Margin = new Padding(4, 5, 4, 5);
+            btnForgotPassword.Name = "btnForgotPassword";
+            btnForgotPassword.Size = new Size(200, 58);
+            btnForgotPassword.TabIndex = 11;
+            btnForgotPassword.Text = "Quên mật khẩu";
+            btnForgotPassword.UseVisualStyleBackColor = false;
+            // 
+            // btnRegister
+            // 
+            btnRegister.BackColor = Color.FromArgb(0, 102, 204);
+            btnRegister.FlatAppearance.BorderSize = 0;
+            btnRegister.FlatStyle = FlatStyle.Flat;
+            btnRegister.Font = new Font("Arial", 10F);
+            btnRegister.ForeColor = Color.White;
+            btnRegister.Location = new Point(143, 576);
+            btnRegister.Margin = new Padding(4, 5, 4, 5);
+            btnRegister.Name = "btnRegister";
+            btnRegister.Size = new Size(200, 58);
+            btnRegister.TabIndex = 10;
+            btnRegister.Text = "Đăng ký";
+            btnRegister.UseVisualStyleBackColor = false;
+            // 
+            // lblStatus
+            // 
+            lblStatus.AutoSize = true;
+            lblStatus.ForeColor = Color.Red;
+            lblStatus.Location = new Point(143, 567);
+            lblStatus.Margin = new Padding(4, 0, 4, 0);
+            lblStatus.Name = "lblStatus";
+            lblStatus.Size = new Size(0, 25);
+            lblStatus.TabIndex = 9;
+            // 
+            // btnLogin
+            // 
+            btnLogin.BackColor = Color.FromArgb(255, 152, 0);
+            btnLogin.FlatAppearance.BorderSize = 0;
+            btnLogin.FlatStyle = FlatStyle.Flat;
+            btnLogin.Font = new Font("Arial", 12F, FontStyle.Bold);
+            btnLogin.ForeColor = Color.White;
+            btnLogin.Location = new Point(143, 445);
+            btnLogin.Margin = new Padding(4, 5, 4, 5);
+            btnLogin.Name = "btnLogin";
+            btnLogin.Size = new Size(429, 75);
+            btnLogin.TabIndex = 8;
+            btnLogin.Text = "ĐĂNG NHẬP";
+            btnLogin.UseVisualStyleBackColor = false;
+            // 
+            // picCaptcha
+            // 
+            picCaptcha.BorderStyle = BorderStyle.FixedSingle;
+            picCaptcha.Location = new Point(394, 340);
+            picCaptcha.Margin = new Padding(4, 5, 4, 5);
+            picCaptcha.Name = "picCaptcha";
+            picCaptcha.Size = new Size(177, 58);
+            picCaptcha.SizeMode = PictureBoxSizeMode.StretchImage;
+            picCaptcha.TabIndex = 7;
+            picCaptcha.TabStop = false;
+            // 
+            // btnRefreshCaptcha
+            // 
+            btnRefreshCaptcha.BackColor = Color.FromArgb(255, 152, 0);
+            btnRefreshCaptcha.FlatAppearance.BorderSize = 0;
+            btnRefreshCaptcha.FlatStyle = FlatStyle.Flat;
+            btnRefreshCaptcha.Font = new Font("Arial", 12F, FontStyle.Bold);
+            btnRefreshCaptcha.ForeColor = Color.White;
+            btnRefreshCaptcha.Location = new Point(579, 340);
+            btnRefreshCaptcha.Margin = new Padding(4, 5, 4, 5);
+            btnRefreshCaptcha.Name = "btnRefreshCaptcha";
+            btnRefreshCaptcha.Size = new Size(61, 58);
+            btnRefreshCaptcha.TabIndex = 6;
+            btnRefreshCaptcha.Text = "↻";
+            btnRefreshCaptcha.UseVisualStyleBackColor = false;
+            // 
+            // txtCaptcha
+            // 
+            txtCaptcha.BorderStyle = BorderStyle.FixedSingle;
+            txtCaptcha.Font = new Font("Arial", 11F);
+            txtCaptcha.Location = new Point(143, 350);
+            txtCaptcha.Margin = new Padding(4, 5, 4, 5);
+            txtCaptcha.Name = "txtCaptcha";
+            txtCaptcha.Size = new Size(183, 33);
+            txtCaptcha.TabIndex = 5;
+            // 
+            // lblCaptcha
+            // 
+            lblCaptcha.AutoSize = true;
+            lblCaptcha.Font = new Font("Arial", 10F);
+            lblCaptcha.ForeColor = Color.Gray;
+            lblCaptcha.Location = new Point(143, 317);
+            lblCaptcha.Margin = new Padding(4, 0, 4, 0);
+            lblCaptcha.Name = "lblCaptcha";
+            lblCaptcha.Size = new Size(94, 23);
+            lblCaptcha.TabIndex = 4;
+            lblCaptcha.Text = "🔐 Nhập mã captcha:";
+            //
+            // lblPassword
+            // 
+            lblPassword.AutoSize = true;
+            lblPassword.Font = new Font("Segoe UI", 10F);
+            lblPassword.ForeColor = Color.FromArgb(60, 60, 60);
+            lblPassword.Location = new Point(143, 210);
+            lblPassword.Name = "lblPassword";
+            lblPassword.Size = new Size(100, 25);
+            lblPassword.Text = "🔒 Mật khẩu";
+            // 
+            // txtPassword
+            // 
+            txtPassword.BorderStyle = BorderStyle.FixedSingle;
+            txtPassword.Font = new Font("Segoe UI", 11F);
+            txtPassword.Location = new Point(143, 240);
+            txtPassword.Margin = new Padding(4, 5, 4, 5);
+            txtPassword.Name = "txtPassword";
+            txtPassword.PasswordChar = '●';
+            txtPassword.Size = new Size(428, 34);
+            txtPassword.TabIndex = 2;
+            // 
+            // lblUsername
+            // 
+            lblUsername.AutoSize = true;
+            lblUsername.Font = new Font("Segoe UI", 10F);
+            lblUsername.ForeColor = Color.FromArgb(60, 60, 60);
+            lblUsername.Location = new Point(143, 135);
+            lblUsername.Name = "lblUsername";
+            lblUsername.Size = new Size(130, 25);
+            lblUsername.Text = "👤 Tên đăng nhập";
+            // 
+            // txtUsername
+            // 
+            txtUsername.BorderStyle = BorderStyle.FixedSingle;
+            txtUsername.Font = new Font("Segoe UI", 11F);
+            txtUsername.Location = new Point(143, 165);
+            txtUsername.Margin = new Padding(4, 5, 4, 5);
+            txtUsername.Name = "txtUsername";
+            txtUsername.Size = new Size(428, 34);
+            txtUsername.TabIndex = 1;
+            // 
+            // lblTitle
+            // 
+            lblTitle.AutoSize = true;
+            lblTitle.Font = new Font("Arial", 16F, FontStyle.Bold);
+            lblTitle.ForeColor = Color.FromArgb(0, 102, 204);
+            lblTitle.Location = new Point(152, 66);
+            lblTitle.Margin = new Padding(4, 0, 4, 0);
+            lblTitle.Name = "lblTitle";
+            lblTitle.Size = new Size(379, 37);
+            lblTitle.TabIndex = 0;
+            lblTitle.Text = "ĐĂNG NHẬP HỆ THỐNG";
             // 
             // LoginForm
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(500, 450);
-            this.Controls.Add(this.pnlMain);
-            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
-            this.MaximizeBox = false;
-            this.Name = "LoginForm";
-            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "Đăng nhập hệ thống";
-            this.pnlMain.ResumeLayout(false);
-            this.pnlMain.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.picCaptcha)).EndInit();
-            this.ResumeLayout(false);
+            AutoScaleDimensions = new SizeF(10F, 25F);
+            AutoScaleMode = AutoScaleMode.Font;
+            ClientSize = new Size(714, 750);
+            Controls.Add(pnlMain);
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            Margin = new Padding(4, 5, 4, 5);
+            MaximizeBox = false;
+            Name = "LoginForm";
+            StartPosition = FormStartPosition.CenterScreen;
+            Text = "Đăng nhập hệ thống";
+            pnlMain.ResumeLayout(false);
+            pnlMain.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)picCaptcha).EndInit();
+            ResumeLayout(false);
         }
 
         #endregion

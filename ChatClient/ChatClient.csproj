@@ -6,6 +6,19 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Remove="Forms\ChatForm.Bubbles.resx" />
+    <None Include="Forms\ChatForm.Bubbles.resx" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Remove="Forms\ChatForm.UIEnhancements.resx" />
+    <None Include="Forms\ChatForm.UIEnhancements.resx" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Remove="Forms\ChatForm.Attachments.resx" />
+    <None Include="Forms\ChatForm.Attachments.resx" />
+  </ItemGroup>
 </Project>
 
 

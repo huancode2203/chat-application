@@ -114,6 +114,18 @@ namespace ChatServer.Services
                 "UnbanMember" => await HandleUnbanMemberAsync(request),
                 "MuteMember" => await HandleMuteMemberAsync(request),
                 "UnmuteMember" => await HandleUnmuteMemberAsync(request),
+                "UploadAttachment" => await HandleUploadAttachmentAsync(request),
+                "SendMessageWithAttachment" => await HandleSendMessageWithAttachmentAsync(request),
+                "DownloadAttachment" => await HandleDownloadAttachmentAsync(request),
+                "DeleteMessage" => await HandleDeleteMessageAsync(request),
+                "GetUsersForChat" => await HandleGetUsersForChatAsync(request),
+                "GetUserProfile" => await HandleGetUserProfileAsync(request),
+                "LeaveConversation" => await HandleLeaveConversationAsync(request),
+                "LeaveGroup" => await HandleLeaveGroupAsync(request),
+                "DeletePrivateChatOneSide" => await HandleDeletePrivateChatOneSideAsync(request),
+                "DeleteGroup" => await HandleDeleteGroupAsync(request),
+                "DeleteArchive" => await HandleDeleteArchiveAsync(request),
+                "GetConversationStatus" => await HandleGetConversationStatusAsync(request),
                 // Admin actions
                 "GetAllUsers" => await HandleGetAllUsersAsync(request),
                 "GetUserDetails" => await HandleGetUserDetailsAsync(request),
@@ -209,17 +221,16 @@ namespace ChatServer.Services
                 });
             }
 
-            // Kiểm tra account đã tồn tại (kể cả chưa verify OTP)
+            // Kiểm tra account đã tồn tại
             if (await _dbContext.AccountExistsAsync(request.SenderUsername))
             {
-                // Kiểm tra xem account đã verify OTP chưa
                 var isVerified = await _dbContext.IsOtpVerifiedAsync(request.SenderUsername);
                 if (!isVerified)
                 {
                     return JsonSerializer.Serialize(new ServerResponse
                     {
                         Success = false,
-                        Message = "Username already exists but not verified. Please verify your email with OTP first, or contact support if you need to resend OTP."
+                        Message = "Username already exists but not verified. Please verify your email with OTP first."
                     });
                 }
                 return JsonSerializer.Serialize(new ServerResponse
@@ -229,24 +240,32 @@ namespace ChatServer.Services
                 });
             }
 
+            // Kiểm tra email đã được sử dụng
+            if (await _dbContext.EmailExistsAsync(request.Email))
+            {
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = false,
+                    Message = "Email đã được sử dụng bởi tài khoản khác."
+                });
+            }
+
             var passwordHash = PasswordHelper.HashPassword(request.Password);
             var clearanceLevel = request.ClearanceLevel > 0 ? request.ClearanceLevel : 1;
 
             // Bảo mật: Không cho phép đăng ký với clearance level >= 3
-            // Chỉ admin mới có thể tạo hoặc nâng cấp user lên level 3
             if (clearanceLevel >= 3)
             {
                 return JsonSerializer.Serialize(new ServerResponse
                 {
                     Success = false,
-                    Message = "Security violation: Cannot register with clearance level 3 or higher. Only administrators can grant high clearance levels."
+                    Message = "Security violation: Cannot register with clearance level 3 or higher."
                 });
             }
 
-            // Đảm bảo clearance level hợp lệ (1 hoặc 2)
             if (clearanceLevel < 1 || clearanceLevel > 2)
             {
-                clearanceLevel = 1; // Default to LOW
+                clearanceLevel = 1;
             }
 
             try
@@ -680,6 +699,20 @@ namespace ChatServer.Services
                     request.SenderUsername
                 );
 
+                // Thêm target user vào private conversation
+                if (request.IsPrivateConversation && !string.IsNullOrEmpty(request.TargetUsername))
+                {
+                    try
+                    {
+                        await _dbContext.AddMemberAsync(mactc, request.TargetUsername, "member", "MEMBER");
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log but don't fail - conversation was created
+                        Console.WriteLine($"Warning: Could not add target user to private chat: {ex.Message}");
+                    }
+                }
+
                 await _dbContext.WriteAuditLogAsync(request.SenderUsername, "CREATE_CONVERSATION", mactc, request.ClearanceLevel);
 
                 return JsonSerializer.Serialize(new ServerResponse
@@ -761,7 +794,8 @@ namespace ChatServer.Services
                 });
             }
 
-            var records = await _dbContext.GetConversationMessagesAsync(request.ConversationId, 100);
+            // Pass userMatk to set MAC context for VPD policy
+            var records = await _dbContext.GetConversationMessagesAsync(request.ConversationId, 100, request.SenderUsername);
 
             var visible = new List<ChatMessageDto>();
             foreach (var r in records)
@@ -1389,14 +1423,64 @@ namespace ChatServer.Services
 
             try
             {
-                // Use stored procedure to delete user completely
-                using var cmd = _dbContext.Connection.CreateCommand();
-                cmd.CommandText = "BEGIN SP_XOA_TAIKHOAN_TOAN_BO(:p_matk); END;";
-                cmd.CommandType = CommandType.Text;
-                cmd.Parameters.Add(new Oracle.ManagedDataAccess.Client.OracleParameter("p_matk", Oracle.ManagedDataAccess.Client.OracleDbType.Varchar2) { Value = request.TargetUsername });
-                await cmd.ExecuteNonQueryAsync();
+                // Get actual MATK first
+                var targetAccount = await _dbContext.GetUserAccountAsync(request.TargetUsername);
+                if (targetAccount == null)
+                {
+                    return JsonSerializer.Serialize(new ServerResponse
+                    {
+                        Success = false,
+                        Message = "User not found."
+                    });
+                }
+                var matk = targetAccount.Matk;
 
-                await _dbContext.WriteAuditLogAsync(request.SenderUsername, "ADMIN_DELETE_USER", request.TargetUsername, 0);
+                // Write audit log FIRST (before deleting user - using admin's username)
+                try
+                {
+                    await _dbContext.WriteAuditLogAsync(request.SenderUsername, "ADMIN_DELETE_USER", $"Deleted user: {request.TargetUsername} (MATK: {matk})", 0);
+                }
+                catch { /* Audit log might fail if no FK, continue anyway */ }
+
+                // Delete from child tables first (separate commands)
+                // Order matters due to foreign key constraints
+                var deleteCommands = new[] {
+                    ("XACTHUCOTP", "DELETE FROM XACTHUCOTP WHERE MATK = :p"),
+                    ("AUDIT_LOGS", "DELETE FROM AUDIT_LOGS WHERE MATK = :p"),
+                    ("TEPDINH", "DELETE FROM TEPDINH WHERE MATN IN (SELECT MATN FROM TINNHAN WHERE MATK = :p)"),
+                    ("TINNHAN", "DELETE FROM TINNHAN WHERE MATK = :p"),
+                    ("THANHVIEN", "DELETE FROM THANHVIEN WHERE MATK = :p"),
+                    ("NGUOIDUNG", "DELETE FROM NGUOIDUNG WHERE MATK = :p"),
+                    ("CUOCTROCHUYEN (owner)", "UPDATE CUOCTROCHUYEN SET NGUOIQL = NULL WHERE NGUOIQL = :p"),
+                    ("TAIKHOAN", "DELETE FROM TAIKHOAN WHERE MATK = :p")
+                };
+
+                var errors = new List<string>();
+                foreach (var (tableName, sql) in deleteCommands)
+                {
+                    try
+                    {
+                        using var cmd = _dbContext.Connection.CreateCommand();
+                        cmd.CommandText = sql;
+                        cmd.Parameters.Add(new Oracle.ManagedDataAccess.Client.OracleParameter("p", Oracle.ManagedDataAccess.Client.OracleDbType.Varchar2) { Value = matk });
+                        var rowsAffected = await cmd.ExecuteNonQueryAsync();
+                        Console.WriteLine($"[DeleteUser] {tableName}: {rowsAffected} rows affected");
+                    }
+                    catch (Exception tableEx)
+                    {
+                        Console.WriteLine($"[DeleteUser] Error deleting from {tableName}: {tableEx.Message}");
+                        errors.Add($"{tableName}: {tableEx.Message}");
+                    }
+                }
+
+                if (errors.Count > 0 && errors.Any(e => e.Contains("TAIKHOAN")))
+                {
+                    return JsonSerializer.Serialize(new ServerResponse
+                    {
+                        Success = false,
+                        Message = $"Failed to delete user account. Errors: {string.Join("; ", errors)}"
+                    });
+                }
 
                 return JsonSerializer.Serialize(new ServerResponse
                 {
@@ -1589,6 +1673,319 @@ namespace ChatServer.Services
             }
         }
 
+        private async Task<string> HandleDeleteMessageAsync(ChatRequest request)
+        {
+            if (request.MessageId <= 0)
+            {
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = false,
+                    Message = "Message ID is required."
+                });
+            }
+
+            try
+            {
+                await _dbContext.DeleteMessageAsync(request.MessageId);
+
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = true,
+                    Message = "Message deleted successfully."
+                });
+            }
+            catch (Exception ex)
+            {
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = false,
+                    Message = $"Failed to delete message: {ex.Message}"
+                });
+            }
+        }
+
+        private async Task<string> HandleGetUsersForChatAsync(ChatRequest request)
+        {
+            try
+            {
+                var users = await _dbContext.GetUsersForChatAsync(request.SenderUsername);
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = true,
+                    Message = "Users loaded.",
+                    UserList = users.ToArray()
+                });
+            }
+            catch (Exception ex)
+            {
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = false,
+                    Message = $"Failed to load users: {ex.Message}"
+                });
+            }
+        }
+
+        private async Task<string> HandleGetUserProfileAsync(ChatRequest request)
+        {
+            if (string.IsNullOrEmpty(request.TargetUsername))
+            {
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = false,
+                    Message = "Target username is required."
+                });
+            }
+
+            try
+            {
+                var user = await _dbContext.GetUserProfileAsync(request.TargetUsername);
+                if (user == null)
+                {
+                    return JsonSerializer.Serialize(new ServerResponse
+                    {
+                        Success = false,
+                        Message = "User not found."
+                    });
+                }
+
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = true,
+                    Message = "User profile loaded.",
+                    AdminUser = new AdminUserDto
+                    {
+                        Matk = user.Matk,
+                        Username = user.Username,
+                        Email = user.Email,
+                        Hovaten = user.Hovaten,
+                        Phone = "", // Hide phone for privacy
+                        ClearanceLevel = user.ClearanceLevel,
+                        IsBannedGlobal = user.IsBannedGlobal,
+                        Mavaitro = user.Mavaitro,
+                        NgayTao = user.NgayTao,
+                        IsOtpVerified = user.IsOtpVerified
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = false,
+                    Message = $"Failed to load user profile: {ex.Message}"
+                });
+            }
+        }
+
+        private async Task<string> HandleLeaveConversationAsync(ChatRequest request)
+        {
+            if (string.IsNullOrEmpty(request.ConversationId))
+            {
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = false,
+                    Message = "Conversation ID is required."
+                });
+            }
+
+            try
+            {
+                var permission = await _dbContext.GetMemberPermissionAsync(request.ConversationId, request.SenderUsername);
+                if (permission == null)
+                {
+                    return JsonSerializer.Serialize(new ServerResponse
+                    {
+                        Success = false,
+                        Message = "You are not a member of this conversation."
+                    });
+                }
+
+                await _dbContext.RemoveMemberAsync(request.ConversationId, request.SenderUsername);
+                await _dbContext.WriteAuditLogAsync(request.SenderUsername, "LEAVE_CONVERSATION", request.ConversationId, request.ClearanceLevel);
+
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = true,
+                    Message = "Left conversation successfully."
+                });
+            }
+            catch (Exception ex)
+            {
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = false,
+                    Message = $"Failed to leave conversation: {ex.Message}"
+                });
+            }
+        }
+
+        // ============================================================================
+        // GROUP/CONVERSATION MANAGEMENT HANDLERS
+        // ============================================================================
+
+        private async Task<string> HandleLeaveGroupAsync(ChatRequest request)
+        {
+            if (string.IsNullOrEmpty(request.ConversationId))
+            {
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = false,
+                    Message = "Conversation ID is required."
+                });
+            }
+
+            try
+            {
+                await _dbContext.LeaveGroupAsync(request.ConversationId, request.SenderUsername);
+
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = true,
+                    Message = "Đã rời nhóm thành công."
+                });
+            }
+            catch (Exception ex)
+            {
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = false,
+                    Message = ex.Message.Contains("ORA-20") ? ex.Message.Split('\n')[0] : $"Lỗi rời nhóm: {ex.Message}"
+                });
+            }
+        }
+
+        private async Task<string> HandleDeletePrivateChatOneSideAsync(ChatRequest request)
+        {
+            if (string.IsNullOrEmpty(request.ConversationId))
+            {
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = false,
+                    Message = "Conversation ID is required."
+                });
+            }
+
+            try
+            {
+                await _dbContext.DeletePrivateChatOneSideAsync(request.ConversationId, request.SenderUsername);
+
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = true,
+                    Message = "Đã xóa cuộc trò chuyện. Người còn lại vẫn có thể nhìn thấy cuộc trò chuyện."
+                });
+            }
+            catch (Exception ex)
+            {
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = false,
+                    Message = ex.Message.Contains("ORA-20") ? ex.Message.Split('\n')[0] : $"Lỗi xóa cuộc trò chuyện: {ex.Message}"
+                });
+            }
+        }
+
+        private async Task<string> HandleDeleteGroupAsync(ChatRequest request)
+        {
+            if (string.IsNullOrEmpty(request.ConversationId))
+            {
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = false,
+                    Message = "Conversation ID is required."
+                });
+            }
+
+            try
+            {
+                await _dbContext.DeleteGroupAsync(request.ConversationId, request.SenderUsername);
+
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = true,
+                    Message = "Đã xóa nhóm. Nhóm sẽ được chuyển vào archive và không thể nhắn tin."
+                });
+            }
+            catch (Exception ex)
+            {
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = false,
+                    Message = ex.Message.Contains("ORA-20") ? ex.Message.Split('\n')[0] : $"Lỗi xóa nhóm: {ex.Message}"
+                });
+            }
+        }
+
+        private async Task<string> HandleDeleteArchiveAsync(ChatRequest request)
+        {
+            if (string.IsNullOrEmpty(request.ConversationId))
+            {
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = false,
+                    Message = "Conversation ID is required."
+                });
+            }
+
+            try
+            {
+                await _dbContext.DeleteArchiveAsync(request.ConversationId, request.SenderUsername);
+
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = true,
+                    Message = "Đã xóa archive thành công."
+                });
+            }
+            catch (Exception ex)
+            {
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = false,
+                    Message = ex.Message.Contains("ORA-20") ? ex.Message.Split('\n')[0] : $"Lỗi xóa archive: {ex.Message}"
+                });
+            }
+        }
+
+        private async Task<string> HandleGetConversationStatusAsync(ChatRequest request)
+        {
+            if (string.IsNullOrEmpty(request.ConversationId))
+            {
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = false,
+                    Message = "Conversation ID is required."
+                });
+            }
+
+            try
+            {
+                var status = await _dbContext.GetConversationStatusAsync(request.ConversationId, request.SenderUsername);
+
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = true,
+                    Message = status.Status,
+                    ConversationStatus = new ConversationStatusDto
+                    {
+                        Status = status.Status,
+                        IsPrivate = status.IsPrivate,
+                        IsArchived = status.IsArchived,
+                        IsOwner = status.IsOwner
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = false,
+                    Message = $"Lỗi kiểm tra trạng thái: {ex.Message}"
+                });
+            }
+        }
+
         private async Task<string> HandleAdminDeleteMessageAsync(ChatRequest request)
         {
             if (request.MessageId <= 0)
@@ -1653,6 +2050,275 @@ namespace ChatServer.Services
                 });
             }
         }
+
+        private async Task<string> HandleUploadAttachmentAsync(ChatRequest request)
+        {
+            if (string.IsNullOrEmpty(request.SenderUsername) ||
+                string.IsNullOrEmpty(request.FileName) ||
+                string.IsNullOrEmpty(request.Content))
+            {
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = false,
+                    Message = "Username, file name and file content are required."
+                });
+            }
+
+            try
+            {
+                var account = await _dbContext.GetUserAccountAsync(request.SenderUsername);
+                if (account == null)
+                {
+                    return JsonSerializer.Serialize(new ServerResponse
+                    {
+                        Success = false,
+                        Message = "User not found."
+                    });
+                }
+
+                byte[] bytes;
+                try
+                {
+                    bytes = Convert.FromBase64String(request.Content);
+                }
+                catch (FormatException)
+                {
+                    return JsonSerializer.Serialize(new ServerResponse
+                    {
+                        Success = false,
+                        Message = "Invalid base64 content for attachment."
+                    });
+                }
+
+                var mimeType = string.IsNullOrWhiteSpace(request.MimeType)
+                    ? "application/octet-stream"
+                    : request.MimeType;
+                var fileSize = request.FileSize > 0 ? request.FileSize : bytes.LongLength;
+
+                var attachmentId = await _dbContext.UploadAttachmentAsync(
+                    account.Matk,
+                    request.FileName,
+                    mimeType,
+                    fileSize,
+                    bytes);
+
+                await _dbContext.WriteAuditLogAsync(account.Matk, "UPLOAD_ATTACHMENT", request.FileName, request.SecurityLabel);
+
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = true,
+                    Message = "File uploaded successfully.",
+                    AttachmentId = attachmentId
+                });
+            }
+            catch (Exception ex)
+            {
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = false,
+                    Message = $"Failed to upload attachment: {ex.Message}"
+                });
+            }
+        }
+
+        private async Task<string> HandleSendMessageWithAttachmentAsync(ChatRequest request)
+        {
+            if (string.IsNullOrEmpty(request.ConversationId) || request.AttachmentId <= 0)
+            {
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = false,
+                    Message = "Conversation ID and attachment ID are required."
+                });
+            }
+
+            if (!_macService.CanWrite(request.ClearanceLevel, request.SecurityLabel))
+            {
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = false,
+                    Message = "MAC policy violation: no write down."
+                });
+            }
+
+            var senderAccount = await _dbContext.GetUserAccountAsync(request.SenderUsername);
+            if (senderAccount == null)
+            {
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = false,
+                    Message = "Sender not found."
+                });
+            }
+
+            var permission = await _dbContext.GetMemberPermissionAsync(request.ConversationId, request.SenderUsername);
+            if (permission == null)
+            {
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = false,
+                    Message = "You are not a member of this conversation."
+                });
+            }
+
+            if (permission.IsBanned)
+            {
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = false,
+                    Message = "You have been banned from this conversation."
+                });
+            }
+
+            if (permission.IsMuted)
+            {
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = false,
+                    Message = "You have been muted in this conversation."
+                });
+            }
+
+            try
+            {
+                var messageId = await _dbContext.SendMessageWithAttachmentAsync(
+                    request.ConversationId,
+                    senderAccount.Matk,
+                    request.Content,
+                    request.SecurityLabel,
+                    request.AttachmentId);
+
+                await _dbContext.WriteAuditLogAsync(senderAccount.Matk, "SEND_MESSAGE_WITH_ATTACHMENT", request.ConversationId, request.SecurityLabel);
+
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = true,
+                    Message = "Message with attachment sent.",
+                    MessageId = messageId
+                });
+            }
+            catch (Exception ex)
+            {
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = false,
+                    Message = $"Failed to send message with attachment: {ex.Message}"
+                });
+            }
+        }
+
+        private async Task<string> HandleDownloadAttachmentAsync(ChatRequest request)
+        {
+            if (request.MessageId <= 0)
+            {
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = false,
+                    Message = "Message ID is required."
+                });
+            }
+
+            try
+            {
+                var account = await _dbContext.GetUserAccountAsync(request.SenderUsername);
+                if (account == null)
+                {
+                    return JsonSerializer.Serialize(new ServerResponse
+                    {
+                        Success = false,
+                        Message = "User not found."
+                    });
+                }
+
+                var message = await _dbContext.GetMessageByIdAsync(request.MessageId);
+                if (message == null)
+                {
+                    return JsonSerializer.Serialize(new ServerResponse
+                    {
+                        Success = false,
+                        Message = "Message not found."
+                    });
+                }
+
+                if (!_macService.CanRead(request.ClearanceLevel, message.SecurityLabel))
+                {
+                    return JsonSerializer.Serialize(new ServerResponse
+                    {
+                        Success = false,
+                        Message = "MAC policy violation: no read up."
+                    });
+                }
+
+                if (!string.IsNullOrEmpty(message.ConversationId))
+                {
+                    var permission = await _dbContext.GetMemberPermissionAsync(message.ConversationId, request.SenderUsername);
+                    if (permission == null)
+                    {
+                        return JsonSerializer.Serialize(new ServerResponse
+                        {
+                            Success = false,
+                            Message = "You are not a member of this conversation."
+                        });
+                    }
+
+                    if (permission.IsBanned)
+                    {
+                        return JsonSerializer.Serialize(new ServerResponse
+                        {
+                            Success = false,
+                            Message = "You have been banned from this conversation."
+                        });
+                    }
+                }
+
+                var attachment = await _dbContext.GetAttachmentByMessageIdAsync(request.MessageId);
+                if (attachment == null)
+                {
+                    return JsonSerializer.Serialize(new ServerResponse
+                    {
+                        Success = false,
+                        Message = "No attachment found for this message."
+                    });
+                }
+
+                var attachmentValue = attachment.Value;
+                if (attachmentValue.Data == null || attachmentValue.Data.Length == 0)
+                {
+                    return JsonSerializer.Serialize(new ServerResponse
+                    {
+                        Success = false,
+                        Message = "No attachment data for this message."
+                    });
+                }
+
+                int attachmentId = attachmentValue.AttachmentId;
+                string fileName = attachmentValue.FileName;
+                string mimeType = attachmentValue.MimeType;
+                byte[] data = attachmentValue.Data;
+                string base64 = Convert.ToBase64String(data);
+
+                await _dbContext.WriteAuditLogAsync(account.Matk, "DOWNLOAD_ATTACHMENT", request.MessageId.ToString(), message.SecurityLabel);
+
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = true,
+                    Message = "Attachment downloaded.",
+                    MessageId = request.MessageId,
+                    AttachmentId = attachmentId,
+                    AttachmentFileName = fileName,
+                    AttachmentMimeType = mimeType,
+                    AttachmentContentBase64 = base64
+                });
+            }
+            catch (Exception ex)
+            {
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = false,
+                    Message = $"Failed to download attachment: {ex.Message}"
+                });
+            }
+        }
     }
 
     // DTOs
@@ -1675,6 +2341,11 @@ namespace ChatServer.Services
         public string TargetUsername { get; set; } = string.Empty;
         public int Limit { get; set; }
         public int MessageId { get; set; }
+        // Attachment fields
+        public string FileName { get; set; } = string.Empty;
+        public string MimeType { get; set; } = string.Empty;
+        public long FileSize { get; set; }
+        public int AttachmentId { get; set; }
     }
 
     public class ServerResponse
@@ -1687,12 +2358,26 @@ namespace ChatServer.Services
         public int ClearanceLevel { get; set; }
         public string ConversationId { get; set; } = string.Empty;
         public int MessageId { get; set; }
+        public int AttachmentId { get; set; }
+        public string AttachmentFileName { get; set; } = string.Empty;
+        public string AttachmentMimeType { get; set; } = string.Empty;
+        public string AttachmentContentBase64 { get; set; } = string.Empty;
         // Admin DTOs
         public AdminUserDto[] AdminUsers { get; set; } = Array.Empty<AdminUserDto>();
         public AdminUserDto? AdminUser { get; set; }
         public AdminConversationDto[] AdminConversations { get; set; } = Array.Empty<AdminConversationDto>();
         public AdminMessageDto[] AdminMessages { get; set; } = Array.Empty<AdminMessageDto>();
         public AuditLogDto[] AuditLogs { get; set; } = Array.Empty<AuditLogDto>();
+        public string[] UserList { get; set; } = Array.Empty<string>();
+        public ConversationStatusDto? ConversationStatus { get; set; }
+    }
+
+    public class ConversationStatusDto
+    {
+        public string Status { get; set; } = string.Empty; // ACTIVE, ARCHIVED, DELETED_BY_ME, NOT_FOUND
+        public bool IsPrivate { get; set; }
+        public bool IsArchived { get; set; }
+        public bool IsOwner { get; set; }
     }
 
     // Admin DTOs

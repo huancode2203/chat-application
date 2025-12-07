@@ -25,6 +25,7 @@ namespace ChatServer.Forms
         private System.Windows.Forms.Button btnDeleteMessage;
         private System.Windows.Forms.Button btnRefreshLogs;
         private System.Windows.Forms.Label lblCurrentUser;
+        private System.Windows.Forms.Button btnPolicyManagement;
 
         protected override void Dispose(bool disposing)
         {
@@ -61,6 +62,7 @@ namespace ChatServer.Forms
             dgvAuditLogs = new System.Windows.Forms.DataGridView();
             btnRefreshLogs = new System.Windows.Forms.Button();
             lblCurrentUser = new System.Windows.Forms.Label();
+            btnPolicyManagement = new System.Windows.Forms.Button();
             tabControl.SuspendLayout();
             tabUsers.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvUsers).BeginInit();
@@ -341,6 +343,20 @@ namespace ChatServer.Forms
             lblCurrentUser.Size = new System.Drawing.Size(14, 37);
             lblCurrentUser.TabIndex = 1;
             // 
+            // btnPolicyManagement
+            // 
+            btnPolicyManagement.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
+            btnPolicyManagement.Location = new System.Drawing.Point(1200, 5);
+            btnPolicyManagement.Name = "btnPolicyManagement";
+            btnPolicyManagement.Size = new System.Drawing.Size(200, 30);
+            btnPolicyManagement.TabIndex = 2;
+            btnPolicyManagement.Text = "📜 Quản lý Policy";
+            btnPolicyManagement.UseVisualStyleBackColor = true;
+            btnPolicyManagement.BackColor = System.Drawing.Color.FromArgb(40, 167, 69);
+            btnPolicyManagement.ForeColor = System.Drawing.Color.White;
+            btnPolicyManagement.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            btnPolicyManagement.Cursor = System.Windows.Forms.Cursors.Hand;
+            // 
             // AdminPanelForm
             // 
             AutoScaleDimensions = new System.Drawing.SizeF(10F, 25F);
@@ -348,6 +364,7 @@ namespace ChatServer.Forms
             ClientSize = new System.Drawing.Size(1429, 1000);
             Controls.Add(tabControl);
             Controls.Add(lblCurrentUser);
+            Controls.Add(btnPolicyManagement);
             Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             Name = "AdminPanelForm";
             StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;

@@ -102,20 +102,24 @@ namespace ChatServer
             // Create a hidden form to maintain UI thread context
             var hiddenForm = new Form { WindowState = FormWindowState.Minimized, ShowInTaskbar = false };
             hiddenForm.Load += (_, _) => hiddenForm.Hide();
+            
+            AdminPanelForm? adminFormRef = null;
 
             // Check for admin command
-            var adminFormRef = (AdminPanelForm?)null;
-            _ = Task.Run(() =>
+            var inputTask = Task.Run(() =>
             {
                 while (!cts.Token.IsCancellationRequested)
                 {
-                    var input = Console.ReadLine();
-                    if (input?.Trim().ToLower() == "admin")
+                    try
                     {
+                        var input = Console.ReadLine();
+                        if (string.IsNullOrEmpty(input) || input.Trim().ToLower() != "admin")
+                            continue;
+
                         // Open admin panel directly without login
-                        if (hiddenForm.InvokeRequired)
+                        hiddenForm.Invoke(new Action(() =>
                         {
-                            hiddenForm.Invoke(new Action(() =>
+                            try
                             {
                                 if (adminFormRef == null || adminFormRef.IsDisposed)
                                 {
@@ -126,20 +130,16 @@ namespace ChatServer
                                 {
                                     adminFormRef.BringToFront();
                                 }
-                            }));
-                        }
-                        else
-                        {
-                            if (adminFormRef == null || adminFormRef.IsDisposed)
-                            {
-                                adminFormRef = new AdminPanelForm(dbContext, "SYSTEM", 3);
-                                adminFormRef.Show();
                             }
-                            else
+                            catch (Exception ex)
                             {
-                                adminFormRef.BringToFront();
+                                Console.WriteLine($"Error opening admin panel: {ex.Message}");
                             }
-                        }
+                        }));
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Input error: {ex.Message}");
                     }
                 }
             });

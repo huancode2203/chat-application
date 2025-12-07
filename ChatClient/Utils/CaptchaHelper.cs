@@ -8,7 +8,7 @@ namespace ChatClient.Utils
 {
     public static class CaptchaHelper
     {
-        private static readonly Random _random = new Random();
+        private static readonly Random _random = new();
         private static string _currentCaptcha = string.Empty;
 
         public static string GenerateCaptcha()

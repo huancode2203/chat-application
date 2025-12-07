@@ -1,8 +1,36 @@
-namespace ChatClient.Forms
+﻿namespace ChatClient.Forms
 {
     partial class ChatForm
     {
         private System.ComponentModel.IContainer components = null;
+
+        // Main controls
+        private System.Windows.Forms.SplitContainer splitContainer1;
+        private System.Windows.Forms.Panel panel1;
+        private System.Windows.Forms.Panel panel2;
+        private System.Windows.Forms.ListView lstConversations;
+        private System.Windows.Forms.ColumnHeader colConversationName;
+        private System.Windows.Forms.ColumnHeader colMemberCount;
+        private System.Windows.Forms.ColumnHeader colType;
+        private ChatClient.Controls.DoubleBufferedListView lstMessages;
+        private System.Windows.Forms.ColumnHeader colTime;
+        private System.Windows.Forms.ColumnHeader colSender;
+        private System.Windows.Forms.ColumnHeader colContent;
+        private System.Windows.Forms.ColumnHeader colLabel;
+        private System.Windows.Forms.GroupBox grpChat;
+        private System.Windows.Forms.TextBox txtMessage;
+        private System.Windows.Forms.TextBox txtReceiver;
+        private System.Windows.Forms.ComboBox cbLabel;
+        private System.Windows.Forms.Button btnSend;
+        private System.Windows.Forms.Button btnRefresh;
+        private System.Windows.Forms.Button btnCreateGroup;
+        private System.Windows.Forms.Button btnPrivateChat;
+        private System.Windows.Forms.Button btnViewMembers;
+        private System.Windows.Forms.Button btnAttachment;
+        private System.Windows.Forms.Button btnLogout;
+        private System.Windows.Forms.ToolStrip toolStrip1;
+        private System.Windows.Forms.StatusStrip statusStrip1;
+        private System.Windows.Forms.ToolStripStatusLabel lblStatus;
 
         protected override void Dispose(bool disposing)
         {
@@ -13,420 +41,327 @@ namespace ChatClient.Forms
             base.Dispose(disposing);
         }
 
-        #region Windows Form Designer generated code
-
         private void InitializeComponent()
         {
-            this.splitContainer1 = new System.Windows.Forms.SplitContainer();
-            this.grpConversations = new System.Windows.Forms.GroupBox();
-            this.lstConversations = new System.Windows.Forms.ListView();
-            this.colName = new System.Windows.Forms.ColumnHeader();
-            this.colMembers = new System.Windows.Forms.ColumnHeader();
-            this.colType = new System.Windows.Forms.ColumnHeader();
-            this.panel1 = new System.Windows.Forms.Panel();
-            this.btnPrivateChat = new System.Windows.Forms.Button();
-            this.btnCreateGroup = new System.Windows.Forms.Button();
-            this.grpChat = new System.Windows.Forms.GroupBox();
-            this.lstMessages = new System.Windows.Forms.ListView();
-            this.colTime = new System.Windows.Forms.ColumnHeader();
-            this.colSender = new System.Windows.Forms.ColumnHeader();
-            this.colContent = new System.Windows.Forms.ColumnHeader();
-            this.colLabel = new System.Windows.Forms.ColumnHeader();
-            this.panel2 = new System.Windows.Forms.Panel();
-            this.btnAttachment = new System.Windows.Forms.Button();
-            this.btnSend = new System.Windows.Forms.Button();
-            this.txtMessage = new System.Windows.Forms.TextBox();
-            this.panel3 = new System.Windows.Forms.Panel();
-            this.btnViewMembers = new System.Windows.Forms.Button();
-            this.cbLabel = new System.Windows.Forms.ComboBox();
-            this.lblLabel = new System.Windows.Forms.Label();
-            this.txtReceiver = new System.Windows.Forms.TextBox();
-            this.lblReceiver = new System.Windows.Forms.Label();
-            this.statusStrip1 = new System.Windows.Forms.StatusStrip();
-            this.lblStatus = new System.Windows.Forms.ToolStripStatusLabel();
-            this.toolStrip1 = new System.Windows.Forms.ToolStrip();
-            this.btnRefresh = new System.Windows.Forms.ToolStripButton();
-            this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
-            this.btnLogout = new System.Windows.Forms.ToolStripButton();
-            ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
-            this.splitContainer1.Panel1.SuspendLayout();
-            this.splitContainer1.Panel2.SuspendLayout();
-            this.splitContainer1.SuspendLayout();
-            this.grpConversations.SuspendLayout();
-            this.panel1.SuspendLayout();
-            this.grpChat.SuspendLayout();
-            this.panel2.SuspendLayout();
-            this.panel3.SuspendLayout();
-            this.statusStrip1.SuspendLayout();
-            this.toolStrip1.SuspendLayout();
-            this.SuspendLayout();
+            splitContainer1 = new SplitContainer();
+            panel1 = new Panel();
+            lstConversations = new ListView();
+            colConversationName = new ColumnHeader();
+            colMemberCount = new ColumnHeader();
+            colType = new ColumnHeader();
+            btnRefresh = new Button();
+            btnCreateGroup = new Button();
+            btnPrivateChat = new Button();
+            btnViewMembers = new Button();
+            btnLogout = new Button();
+            panel2 = new Panel();
+            lstMessages = new ChatClient.Controls.DoubleBufferedListView();
+            colTime = new ColumnHeader();
+            colSender = new ColumnHeader();
+            colContent = new ColumnHeader();
+            colLabel = new ColumnHeader();
+            grpChat = new GroupBox();
+            txtReceiver = new TextBox();
+            txtMessage = new TextBox();
+            cbLabel = new ComboBox();
+            btnAttachment = new Button();
+            btnSend = new Button();
+            toolStrip1 = new ToolStrip();
+            statusStrip1 = new StatusStrip();
+            lblStatus = new ToolStripStatusLabel();
+            ((System.ComponentModel.ISupportInitialize)splitContainer1).BeginInit();
+            splitContainer1.Panel1.SuspendLayout();
+            splitContainer1.Panel2.SuspendLayout();
+            splitContainer1.SuspendLayout();
+            panel1.SuspendLayout();
+            panel2.SuspendLayout();
+            grpChat.SuspendLayout();
+            statusStrip1.SuspendLayout();
+            SuspendLayout();
             // 
             // splitContainer1
             // 
-            this.splitContainer1.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.splitContainer1.Location = new System.Drawing.Point(0, 25);
-            this.splitContainer1.Name = "splitContainer1";
+            splitContainer1.Dock = DockStyle.Fill;
+            splitContainer1.Location = new Point(0, 25);
+            splitContainer1.Margin = new Padding(4);
+            splitContainer1.Name = "splitContainer1";
             // 
             // splitContainer1.Panel1
             // 
-            this.splitContainer1.Panel1.Controls.Add(this.grpConversations);
-            this.splitContainer1.Panel1.Controls.Add(this.panel1);
+            splitContainer1.Panel1.Controls.Add(panel1);
             // 
             // splitContainer1.Panel2
             // 
-            this.splitContainer1.Panel2.Controls.Add(this.grpChat);
-            this.splitContainer1.Panel2.Controls.Add(this.panel2);
-            this.splitContainer1.Panel2.Controls.Add(this.panel3);
-            this.splitContainer1.Size = new System.Drawing.Size(1200, 625);
-            this.splitContainer1.SplitterDistance = 300;
-            this.splitContainer1.TabIndex = 0;
-            // 
-            // grpConversations
-            // 
-            this.grpConversations.Controls.Add(this.lstConversations);
-            this.grpConversations.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.grpConversations.Location = new System.Drawing.Point(0, 0);
-            this.grpConversations.Name = "grpConversations";
-            this.grpConversations.Padding = new System.Windows.Forms.Padding(10);
-            this.grpConversations.Size = new System.Drawing.Size(300, 555);
-            this.grpConversations.TabIndex = 0;
-            this.grpConversations.TabStop = false;
-            this.grpConversations.Text = "Cuộc trò chuyện";
-            // 
-            // lstConversations
-            // 
-            this.lstConversations.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
-            this.colName,
-            this.colMembers,
-            this.colType});
-            this.lstConversations.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.lstConversations.FullRowSelect = true;
-            this.lstConversations.GridLines = true;
-            this.lstConversations.HideSelection = false;
-            this.lstConversations.Location = new System.Drawing.Point(10, 26);
-            this.lstConversations.MultiSelect = false;
-            this.lstConversations.Name = "lstConversations";
-            this.lstConversations.Size = new System.Drawing.Size(280, 519);
-            this.lstConversations.TabIndex = 0;
-            this.lstConversations.UseCompatibleStateImageBehavior = false;
-            this.lstConversations.View = System.Windows.Forms.View.Details;
-            // 
-            // colName
-            // 
-            this.colName.Text = "Tên";
-            this.colName.Width = 150;
-            // 
-            // colMembers
-            // 
-            this.colMembers.Text = "TV";
-            this.colMembers.Width = 50;
-            // 
-            // colType
-            // 
-            this.colType.Text = "Loại";
-            this.colType.Width = 70;
+            splitContainer1.Panel2.Controls.Add(panel2);
+            splitContainer1.Size = new Size(1626, 895);
+            splitContainer1.SplitterDistance = 406;
+            splitContainer1.SplitterWidth = 5;
+            splitContainer1.TabIndex = 0;
             // 
             // panel1
             // 
-            this.panel1.Controls.Add(this.btnPrivateChat);
-            this.panel1.Controls.Add(this.btnCreateGroup);
-            this.panel1.Dock = System.Windows.Forms.DockStyle.Bottom;
-            this.panel1.Location = new System.Drawing.Point(0, 555);
-            this.panel1.Name = "panel1";
-            this.panel1.Padding = new System.Windows.Forms.Padding(10);
-            this.panel1.Size = new System.Drawing.Size(300, 70);
-            this.panel1.TabIndex = 1;
+            panel1.Controls.Add(lstConversations);
+            panel1.Controls.Add(btnRefresh);
+            panel1.Controls.Add(btnCreateGroup);
+            panel1.Controls.Add(btnPrivateChat);
+            panel1.Controls.Add(btnViewMembers);
+            panel1.Controls.Add(btnLogout);
+            panel1.Dock = DockStyle.Fill;
+            panel1.Location = new Point(0, 0);
+            panel1.Margin = new Padding(4);
+            panel1.Name = "panel1";
+            panel1.Size = new Size(406, 895);
+            panel1.TabIndex = 0;
             // 
-            // btnPrivateChat
+            // lstConversations
             // 
-            this.btnPrivateChat.Dock = System.Windows.Forms.DockStyle.Top;
-            this.btnPrivateChat.Location = new System.Drawing.Point(10, 45);
-            this.btnPrivateChat.Name = "btnPrivateChat";
-            this.btnPrivateChat.Size = new System.Drawing.Size(280, 35);
-            this.btnPrivateChat.TabIndex = 1;
-            this.btnPrivateChat.Text = "💬 Chat riêng";
-            this.btnPrivateChat.UseVisualStyleBackColor = true;
+            lstConversations.Columns.AddRange(new ColumnHeader[] { colConversationName, colMemberCount, colType });
+            lstConversations.Dock = DockStyle.Fill;
+            lstConversations.FullRowSelect = true;
+            lstConversations.GridLines = true;
+            lstConversations.Location = new Point(0, 0);
+            lstConversations.Margin = new Padding(4);
+            lstConversations.MultiSelect = false;
+            lstConversations.Name = "lstConversations";
+            lstConversations.Size = new Size(406, 670);
+            lstConversations.TabIndex = 0;
+            lstConversations.UseCompatibleStateImageBehavior = false;
+            lstConversations.View = View.Details;
             // 
-            // btnCreateGroup
+            // colConversationName
             // 
-            this.btnCreateGroup.Dock = System.Windows.Forms.DockStyle.Top;
-            this.btnCreateGroup.Location = new System.Drawing.Point(10, 10);
-            this.btnCreateGroup.Name = "btnCreateGroup";
-            this.btnCreateGroup.Size = new System.Drawing.Size(280, 35);
-            this.btnCreateGroup.TabIndex = 0;
-            this.btnCreateGroup.Text = "➕ Tạo nhóm";
-            this.btnCreateGroup.UseVisualStyleBackColor = true;
+            colConversationName.Text = "Cuộc trò chuyện";
+            colConversationName.Width = 150;
             // 
-            // grpChat
+            // colMemberCount
             // 
-            this.grpChat.Controls.Add(this.lstMessages);
-            this.grpChat.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.grpChat.Enabled = false;
-            this.grpChat.Location = new System.Drawing.Point(0, 70);
-            this.grpChat.Name = "grpChat";
-            this.grpChat.Padding = new System.Windows.Forms.Padding(10);
-            this.grpChat.Size = new System.Drawing.Size(896, 435);
-            this.grpChat.TabIndex = 0;
-            this.grpChat.TabStop = false;
-            this.grpChat.Text = "Tin nhắn";
+            colMemberCount.Text = "Thành viên";
+            colMemberCount.Width = 70;
             // 
-            // lstMessages
+            // colType
             // 
-            this.lstMessages.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
-            this.colTime,
-            this.colSender,
-            this.colContent,
-            this.colLabel});
-            this.lstMessages.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.lstMessages.FullRowSelect = true;
-            this.lstMessages.GridLines = true;
-            this.lstMessages.HideSelection = false;
-            this.lstMessages.Location = new System.Drawing.Point(10, 26);
-            this.lstMessages.Name = "lstMessages";
-            this.lstMessages.Size = new System.Drawing.Size(876, 399);
-            this.lstMessages.TabIndex = 0;
-            this.lstMessages.UseCompatibleStateImageBehavior = false;
-            this.lstMessages.View = System.Windows.Forms.View.Details;
-            // 
-            // colTime
-            // 
-            this.colTime.Text = "Thời gian";
-            this.colTime.Width = 100;
-            // 
-            // colSender
-            // 
-            this.colSender.Text = "Người gửi";
-            this.colSender.Width = 120;
-            // 
-            // colContent
-            // 
-            this.colContent.Text = "Nội dung";
-            this.colContent.Width = 550;
-            // 
-            // colLabel
-            // 
-            this.colLabel.Text = "Mức";
-            this.colLabel.Width = 50;
-            // 
-            // panel2
-            // 
-            this.panel2.Controls.Add(this.btnAttachment);
-            this.panel2.Controls.Add(this.btnSend);
-            this.panel2.Controls.Add(this.txtMessage);
-            this.panel2.Dock = System.Windows.Forms.DockStyle.Bottom;
-            this.panel2.Location = new System.Drawing.Point(0, 505);
-            this.panel2.Name = "panel2";
-            this.panel2.Padding = new System.Windows.Forms.Padding(10);
-            this.panel2.Size = new System.Drawing.Size(896, 120);
-            this.panel2.TabIndex = 1;
-            // 
-            // btnAttachment
-            // 
-            this.btnAttachment.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnAttachment.Location = new System.Drawing.Point(656, 75);
-            this.btnAttachment.Name = "btnAttachment";
-            this.btnAttachment.Size = new System.Drawing.Size(110, 35);
-            this.btnAttachment.TabIndex = 2;
-            this.btnAttachment.Text = "📎 Đính kèm";
-            this.btnAttachment.UseVisualStyleBackColor = true;
-            // 
-            // btnSend
-            // 
-            this.btnSend.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnSend.Location = new System.Drawing.Point(776, 75);
-            this.btnSend.Name = "btnSend";
-            this.btnSend.Size = new System.Drawing.Size(110, 35);
-            this.btnSend.TabIndex = 1;
-            this.btnSend.Text = "📤 Gửi";
-            this.btnSend.UseVisualStyleBackColor = true;
-            // 
-            // txtMessage
-            // 
-            this.txtMessage.Dock = System.Windows.Forms.DockStyle.Top;
-            this.txtMessage.Location = new System.Drawing.Point(10, 10);
-            this.txtMessage.Multiline = true;
-            this.txtMessage.Name = "txtMessage";
-            this.txtMessage.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-            this.txtMessage.Size = new System.Drawing.Size(876, 60);
-            this.txtMessage.TabIndex = 0;
-            // 
-            // panel3
-            // 
-            this.panel3.Controls.Add(this.btnViewMembers);
-            this.panel3.Controls.Add(this.cbLabel);
-            this.panel3.Controls.Add(this.lblLabel);
-            this.panel3.Controls.Add(this.txtReceiver);
-            this.panel3.Controls.Add(this.lblReceiver);
-            this.panel3.Dock = System.Windows.Forms.DockStyle.Top;
-            this.panel3.Location = new System.Drawing.Point(0, 0);
-            this.panel3.Name = "panel3";
-            this.panel3.Padding = new System.Windows.Forms.Padding(10);
-            this.panel3.Size = new System.Drawing.Size(896, 70);
-            this.panel3.TabIndex = 2;
-            // 
-            // btnViewMembers
-            // 
-            this.btnViewMembers.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnViewMembers.Location = new System.Drawing.Point(746, 25);
-            this.btnViewMembers.Name = "btnViewMembers";
-            this.btnViewMembers.Size = new System.Drawing.Size(140, 30);
-            this.btnViewMembers.TabIndex = 4;
-            this.btnViewMembers.Text = "👥 Thành viên";
-            this.btnViewMembers.UseVisualStyleBackColor = true;
-            // 
-            // cbLabel
-            // 
-            this.cbLabel.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cbLabel.FormattingEnabled = true;
-            this.cbLabel.Items.AddRange(new object[] {
-            "1 - LOW",
-            "2 - MEDIUM",
-            "3 - HIGH"});
-            this.cbLabel.Location = new System.Drawing.Point(520, 27);
-            this.cbLabel.Name = "cbLabel";
-            this.cbLabel.Size = new System.Drawing.Size(200, 23);
-            this.cbLabel.TabIndex = 3;
-            // 
-            // lblLabel
-            // 
-            this.lblLabel.AutoSize = true;
-            this.lblLabel.Location = new System.Drawing.Point(420, 30);
-            this.lblLabel.Name = "lblLabel";
-            this.lblLabel.Size = new System.Drawing.Size(94, 15);
-            this.lblLabel.TabIndex = 2;
-            this.lblLabel.Text = "Mức bảo mật:";
-            // 
-            // txtReceiver
-            // 
-            this.txtReceiver.Location = new System.Drawing.Point(130, 27);
-            this.txtReceiver.Name = "txtReceiver";
-            this.txtReceiver.ReadOnly = true;
-            this.txtReceiver.Size = new System.Drawing.Size(250, 23);
-            this.txtReceiver.TabIndex = 1;
-            // 
-            // lblReceiver
-            // 
-            this.lblReceiver.AutoSize = true;
-            this.lblReceiver.Location = new System.Drawing.Point(13, 30);
-            this.lblReceiver.Name = "lblReceiver";
-            this.lblReceiver.Size = new System.Drawing.Size(111, 15);
-            this.lblReceiver.TabIndex = 0;
-            this.lblReceiver.Text = "Cuộc trò chuyện:";
-            // 
-            // statusStrip1
-            // 
-            this.statusStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.lblStatus});
-            this.statusStrip1.Location = new System.Drawing.Point(0, 650);
-            this.statusStrip1.Name = "statusStrip1";
-            this.statusStrip1.Size = new System.Drawing.Size(1200, 22);
-            this.statusStrip1.TabIndex = 1;
-            this.statusStrip1.Text = "statusStrip1";
-            // 
-            // lblStatus
-            // 
-            this.lblStatus.Name = "lblStatus";
-            this.lblStatus.Size = new System.Drawing.Size(58, 17);
-            this.lblStatus.Text = "Sẵn sàng";
-            // 
-            // toolStrip1
-            // 
-            this.toolStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.btnRefresh,
-            this.toolStripSeparator1,
-            this.btnLogout});
-            this.toolStrip1.Location = new System.Drawing.Point(0, 0);
-            this.toolStrip1.Name = "toolStrip1";
-            this.toolStrip1.Size = new System.Drawing.Size(1200, 25);
-            this.toolStrip1.TabIndex = 2;
-            this.toolStrip1.Text = "toolStrip1";
+            colType.Text = "Loại";
+            colType.Width = 80;
             // 
             // btnRefresh
             // 
-            this.btnRefresh.Image = null;
-            this.btnRefresh.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.btnRefresh.Name = "btnRefresh";
-            this.btnRefresh.Size = new System.Drawing.Size(69, 22);
-            this.btnRefresh.Text = "🔄 Làm mới";
+            btnRefresh.Dock = DockStyle.Bottom;
+            btnRefresh.Location = new Point(0, 670);
+            btnRefresh.Margin = new Padding(4);
+            btnRefresh.Name = "btnRefresh";
+            btnRefresh.Size = new Size(406, 45);
+            btnRefresh.TabIndex = 1;
+            btnRefresh.Text = "🔄 Làm mới";
+            btnRefresh.UseVisualStyleBackColor = true;
             // 
-            // toolStripSeparator1
+            // btnCreateGroup
             // 
-            this.toolStripSeparator1.Name = "toolStripSeparator1";
-            this.toolStripSeparator1.Size = new System.Drawing.Size(6, 25);
+            btnCreateGroup.Dock = DockStyle.Bottom;
+            btnCreateGroup.Location = new Point(0, 715);
+            btnCreateGroup.Margin = new Padding(4);
+            btnCreateGroup.Name = "btnCreateGroup";
+            btnCreateGroup.Size = new Size(406, 45);
+            btnCreateGroup.TabIndex = 2;
+            btnCreateGroup.Text = "👥 Tạo nhóm";
+            btnCreateGroup.UseVisualStyleBackColor = true;
+            // 
+            // btnPrivateChat
+            // 
+            btnPrivateChat.Dock = DockStyle.Bottom;
+            btnPrivateChat.Location = new Point(0, 760);
+            btnPrivateChat.Margin = new Padding(4);
+            btnPrivateChat.Name = "btnPrivateChat";
+            btnPrivateChat.Size = new Size(406, 45);
+            btnPrivateChat.TabIndex = 3;
+            btnPrivateChat.Text = "💬 Chat riêng";
+            btnPrivateChat.UseVisualStyleBackColor = true;
+            // 
+            // btnViewMembers
+            // 
+            btnViewMembers.Dock = DockStyle.Bottom;
+            btnViewMembers.Location = new Point(0, 805);
+            btnViewMembers.Margin = new Padding(4);
+            btnViewMembers.Name = "btnViewMembers";
+            btnViewMembers.Size = new Size(406, 45);
+            btnViewMembers.TabIndex = 4;
+            btnViewMembers.Text = "👤 Xem thành viên";
+            btnViewMembers.UseVisualStyleBackColor = true;
             // 
             // btnLogout
             // 
-            this.btnLogout.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
-            this.btnLogout.Image = null;
-            this.btnLogout.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.btnLogout.Name = "btnLogout";
-            this.btnLogout.Size = new System.Drawing.Size(78, 22);
-            this.btnLogout.Text = "🚪 Đăng xuất";
+            btnLogout.Dock = DockStyle.Bottom;
+            btnLogout.Location = new Point(0, 850);
+            btnLogout.Margin = new Padding(4);
+            btnLogout.Name = "btnLogout";
+            btnLogout.Size = new Size(406, 45);
+            btnLogout.TabIndex = 5;
+            btnLogout.Text = "🚪 Đăng xuất";
+            btnLogout.UseVisualStyleBackColor = true;
+            // 
+            // panel2
+            // 
+            panel2.Controls.Add(lstMessages);
+            panel2.Controls.Add(grpChat);
+            panel2.Dock = DockStyle.Fill;
+            panel2.Location = new Point(0, 0);
+            panel2.Margin = new Padding(4);
+            panel2.Name = "panel2";
+            panel2.Size = new Size(1215, 895);
+            panel2.TabIndex = 0;
+            // 
+            // lstMessages
+            // 
+            lstMessages.Columns.AddRange(new ColumnHeader[] { colTime, colSender, colContent, colLabel });
+            lstMessages.Dock = DockStyle.Fill;
+            lstMessages.FullRowSelect = true;
+            lstMessages.HeaderStyle = ColumnHeaderStyle.None;
+            lstMessages.Location = new Point(0, 0);
+            lstMessages.Margin = new Padding(4);
+            lstMessages.Name = "lstMessages";
+            lstMessages.OwnerDraw = true;
+            lstMessages.Size = new Size(1215, 707);
+            lstMessages.TabIndex = 0;
+            lstMessages.UseCompatibleStateImageBehavior = false;
+            lstMessages.View = View.Details;
+            // 
+            // colTime
+            // 
+            colTime.Text = "Thời gian";
+            colTime.Width = 0;
+            // 
+            // colSender
+            // 
+            colSender.Text = "Người gửi";
+            colSender.Width = 0;
+            // 
+            // colContent
+            // 
+            colContent.Text = "Nội dung";
+            colContent.Width = 896;
+            // 
+            // colLabel
+            // 
+            colLabel.Text = "Mức độ";
+            colLabel.Width = 0;
+            // 
+            // grpChat
+            // 
+            grpChat.Controls.Add(txtReceiver);
+            grpChat.Controls.Add(txtMessage);
+            grpChat.Controls.Add(cbLabel);
+            grpChat.Controls.Add(btnAttachment);
+            grpChat.Controls.Add(btnSend);
+            grpChat.Dock = DockStyle.Bottom;
+            grpChat.Enabled = false;
+            grpChat.Location = new Point(0, 707);
+            grpChat.Margin = new Padding(4);
+            grpChat.Name = "grpChat";
+            grpChat.Padding = new Padding(4);
+            grpChat.Size = new Size(1215, 188);
+            grpChat.TabIndex = 1;
+            grpChat.TabStop = false;
+            grpChat.Text = "💬 Trò chuyện";
+            // 
+            // txtReceiver
+            // 
+            txtReceiver.Location = new Point(19, 31);
+            txtReceiver.Margin = new Padding(4);
+            txtReceiver.Name = "txtReceiver";
+            txtReceiver.ReadOnly = true;
+            txtReceiver.Size = new Size(374, 31);
+            txtReceiver.TabIndex = 0;
+            // 
+            // txtMessage
+            // 
+            txtMessage.Location = new Point(19, 75);
+            txtMessage.Margin = new Padding(4);
+            txtMessage.Multiline = true;
+            txtMessage.Name = "txtMessage";
+            txtMessage.ScrollBars = ScrollBars.Vertical;
+            txtMessage.Size = new Size(812, 93);
+            txtMessage.TabIndex = 1;
+            // 
+            // cbLabel
+            // 
+            cbLabel.DropDownStyle = ComboBoxStyle.DropDownList;
+            cbLabel.FormattingEnabled = true;
+            cbLabel.Items.AddRange(new object[] { "1 - LOW", "2 - MEDIUM", "3 - HIGH" });
+            cbLabel.Location = new Point(850, 75);
+            cbLabel.Margin = new Padding(4);
+            cbLabel.Name = "cbLabel";
+            cbLabel.Size = new Size(249, 33);
+            cbLabel.TabIndex = 2;
+            // 
+            // btnAttachment
+            // 
+            btnAttachment.Location = new Point(850, 119);
+            btnAttachment.Margin = new Padding(4);
+            btnAttachment.Name = "btnAttachment";
+            btnAttachment.Size = new Size(119, 50);
+            btnAttachment.TabIndex = 3;
+            btnAttachment.Text = "📎 File";
+            btnAttachment.UseVisualStyleBackColor = true;
+            // 
+            // btnSend
+            // 
+            btnSend.Location = new Point(981, 119);
+            btnSend.Margin = new Padding(4);
+            btnSend.Name = "btnSend";
+            btnSend.Size = new Size(119, 50);
+            btnSend.TabIndex = 4;
+            btnSend.Text = "📤 Gửi";
+            btnSend.UseVisualStyleBackColor = true;
+            // 
+            // toolStrip1
+            // 
+            toolStrip1.ImageScalingSize = new Size(20, 20);
+            toolStrip1.Location = new Point(0, 0);
+            toolStrip1.Name = "toolStrip1";
+            toolStrip1.Size = new Size(1626, 25);
+            toolStrip1.TabIndex = 1;
+            toolStrip1.Text = "toolStrip1";
+            // 
+            // statusStrip1
+            // 
+            statusStrip1.ImageScalingSize = new Size(20, 20);
+            statusStrip1.Items.AddRange(new ToolStripItem[] { lblStatus });
+            statusStrip1.Location = new Point(0, 920);
+            statusStrip1.Name = "statusStrip1";
+            statusStrip1.Padding = new Padding(1, 0, 18, 0);
+            statusStrip1.Size = new Size(1626, 32);
+            statusStrip1.TabIndex = 2;
+            statusStrip1.Text = "statusStrip1";
+            // 
+            // lblStatus
+            // 
+            lblStatus.Name = "lblStatus";
+            lblStatus.Size = new Size(84, 25);
+            lblStatus.Text = "Sẵn sàng";
             // 
             // ChatForm
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1200, 672);
-            this.Controls.Add(this.splitContainer1);
-            this.Controls.Add(this.statusStrip1);
-            this.Controls.Add(this.toolStrip1);
-            this.MinimumSize = new System.Drawing.Size(1000, 600);
-            this.Name = "ChatForm";
-            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "Chat Nội Bộ";
-            this.splitContainer1.Panel1.ResumeLayout(false);
-            this.splitContainer1.Panel2.ResumeLayout(false);
-            this.splitContainer1.Panel2.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).EndInit();
-            this.splitContainer1.ResumeLayout(false);
-            this.grpConversations.ResumeLayout(false);
-            this.panel1.ResumeLayout(false);
-            this.grpChat.ResumeLayout(false);
-            this.panel2.ResumeLayout(false);
-            this.panel2.PerformLayout();
-            this.panel3.ResumeLayout(false);
-            this.panel3.PerformLayout();
-            this.statusStrip1.ResumeLayout(false);
-            this.statusStrip1.PerformLayout();
-            this.toolStrip1.ResumeLayout(false);
-            this.toolStrip1.PerformLayout();
-            this.ResumeLayout(false);
-            this.PerformLayout();
+            AutoScaleDimensions = new SizeF(10F, 25F);
+            AutoScaleMode = AutoScaleMode.Font;
+            ClientSize = new Size(1626, 952);
+            Controls.Add(splitContainer1);
+            Controls.Add(toolStrip1);
+            Controls.Add(statusStrip1);
+            Margin = new Padding(4);
+            Name = "ChatForm";
+            StartPosition = FormStartPosition.CenterScreen;
+            Text = "Chat Application";
+            splitContainer1.Panel1.ResumeLayout(false);
+            splitContainer1.Panel2.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)splitContainer1).EndInit();
+            splitContainer1.ResumeLayout(false);
+            panel1.ResumeLayout(false);
+            panel2.ResumeLayout(false);
+            grpChat.ResumeLayout(false);
+            grpChat.PerformLayout();
+            statusStrip1.ResumeLayout(false);
+            statusStrip1.PerformLayout();
+            ResumeLayout(false);
+            PerformLayout();
         }
-
-        #endregion
-
-        private System.Windows.Forms.SplitContainer splitContainer1;
-        private System.Windows.Forms.GroupBox grpConversations;
-        private System.Windows.Forms.ListView lstConversations;
-        private System.Windows.Forms.ColumnHeader colName;
-        private System.Windows.Forms.ColumnHeader colMembers;
-        private System.Windows.Forms.ColumnHeader colType;
-        private System.Windows.Forms.Panel panel1;
-        private System.Windows.Forms.Button btnPrivateChat;
-        private System.Windows.Forms.Button btnCreateGroup;
-        private System.Windows.Forms.GroupBox grpChat;
-        private System.Windows.Forms.ListView lstMessages;
-        private System.Windows.Forms.ColumnHeader colTime;
-        private System.Windows.Forms.ColumnHeader colSender;
-        private System.Windows.Forms.ColumnHeader colContent;
-        private System.Windows.Forms.ColumnHeader colLabel;
-        private System.Windows.Forms.Panel panel2;
-        private System.Windows.Forms.Button btnAttachment;
-        private System.Windows.Forms.Button btnSend;
-        private System.Windows.Forms.TextBox txtMessage;
-        private System.Windows.Forms.Panel panel3;
-        private System.Windows.Forms.Button btnViewMembers;
-        private System.Windows.Forms.ComboBox cbLabel;
-        private System.Windows.Forms.Label lblLabel;
-        private System.Windows.Forms.TextBox txtReceiver;
-        private System.Windows.Forms.Label lblReceiver;
-        private System.Windows.Forms.StatusStrip statusStrip1;
-        private System.Windows.Forms.ToolStripStatusLabel lblStatus;
-        private System.Windows.Forms.ToolStrip toolStrip1;
-        private System.Windows.Forms.ToolStripButton btnRefresh;
-        private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
-        private System.Windows.Forms.ToolStripButton btnLogout;
     }
 }
