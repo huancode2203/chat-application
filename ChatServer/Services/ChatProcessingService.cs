@@ -120,6 +120,7 @@ namespace ChatServer.Services
                 "DeleteMessage" => await HandleDeleteMessageAsync(request),
                 "GetUsersForChat" => await HandleGetUsersForChatAsync(request),
                 "GetUserProfile" => await HandleGetUserProfileAsync(request),
+                "UpdateProfile" => await HandleUpdateProfileAsync(request),
                 "LeaveConversation" => await HandleLeaveConversationAsync(request),
                 "LeaveGroup" => await HandleLeaveGroupAsync(request),
                 "DeletePrivateChatOneSide" => await HandleDeletePrivateChatOneSideAsync(request),
@@ -158,6 +159,18 @@ namespace ChatServer.Services
                 });
             }
 
+            // Kiểm tra tài khoản có bị khóa do nhập sai mật khẩu quá nhiều lần không
+            var lockStatus = await _dbContext.CheckAccountLockStatusAsync(request.SenderUsername);
+            if (lockStatus.IsLocked)
+            {
+                var remainingMinutes = (int)(lockStatus.LockedUntil!.Value - DateTime.Now).TotalMinutes + 1;
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = false,
+                    Message = $"Tài khoản bị khóa tạm thời do nhập sai mật khẩu {lockStatus.FailedAttempts} lần. Vui lòng thử lại sau {remainingMinutes} phút hoặc liên hệ Admin."
+                });
+            }
+
             var account = await _dbContext.GetUserAccountAsync(request.SenderUsername);
             if (account == null)
             {
@@ -179,16 +192,29 @@ namespace ChatServer.Services
 
             if (!PasswordHelper.VerifyPassword(request.Password, account.PasswordHash))
             {
-                await _dbContext.WriteAuditLogAsync(request.SenderUsername, "LOGIN_FAILED", "Invalid password", 0);
+                // Tăng số lần đăng nhập sai
+                var (newCount, isNowLocked) = await _dbContext.IncrementFailedLoginAsync(request.SenderUsername);
+                await _dbContext.WriteAuditLogAsync(request.SenderUsername, "LOGIN_FAILED", $"Invalid password (attempt {newCount})", 0);
+                
+                if (isNowLocked)
+                {
+                    return JsonSerializer.Serialize(new ServerResponse
+                    {
+                        Success = false,
+                        Message = $"Bạn đã nhập sai mật khẩu {newCount} lần. Tài khoản bị khóa 30 phút. Liên hệ Admin để mở khóa sớm hơn."
+                    });
+                }
+                
+                var remainingAttempts = 5 - newCount;
                 return JsonSerializer.Serialize(new ServerResponse
                 {
                     Success = false,
-                    Message = "Invalid username or password."
+                    Message = $"Sai mật khẩu. Còn {remainingAttempts} lần thử trước khi bị khóa."
                 });
             }
 
             // Kiểm tra OTP đã được xác minh chưa (bắt buộc cho tài khoản mới đăng ký)
-            var isOtpVerified = await _dbContext.IsOtpVerifiedAsync(request.SenderUsername);
+            var isOtpVerified = account.IsOtpVerified || await _dbContext.IsOtpVerifiedAsync(request.SenderUsername);
             if (!isOtpVerified)
             {
                 await _dbContext.WriteAuditLogAsync(request.SenderUsername, "LOGIN_FAILED", "OTP not verified", 0);
@@ -199,13 +225,34 @@ namespace ChatServer.Services
                 });
             }
 
-            await _dbContext.WriteAuditLogAsync(request.SenderUsername, "LOGIN_SUCCESS", request.SenderUsername, account.ClearanceLevel);
+            // Đăng nhập thành công - reset số lần đăng nhập sai
+            await _dbContext.ResetFailedLoginAsync(request.SenderUsername);
+            
+            // Cập nhật thông tin đăng nhập
+            await _dbContext.UpdateLoginInfoAsync(account.Matk);
+            await _dbContext.WriteAuditLogAsync(account.Matk, "LOGIN_SUCCESS", request.SenderUsername, account.ClearanceLevel);
+
+            // Lấy thông tin NGUOIDUNG (email, hovaten, sdt)
+            var userProfile = await _dbContext.GetUserProfileAsync(account.Matk);
 
             return JsonSerializer.Serialize(new ServerResponse
             {
                 Success = true,
                 Message = "Login successful.",
-                ClearanceLevel = account.ClearanceLevel
+                // Thông tin TAIKHOAN
+                Matk = account.Matk,
+                Username = account.Username,
+                ClearanceLevel = account.ClearanceLevel,
+                Mavaitro = account.Mavaitro,
+                IsBannedGlobal = account.IsBannedGlobal,
+                IsOtpVerified = true,
+                NgayTao = account.NgayTao,
+                LastLogin = DateTime.Now,
+                PublicKey = account.PublicKey,
+                // Thông tin NGUOIDUNG
+                Email = userProfile?.Email ?? string.Empty,
+                Hovaten = userProfile?.Hovaten ?? string.Empty,
+                Sdt = userProfile?.Phone ?? string.Empty
             });
         }
 
@@ -1791,6 +1838,59 @@ namespace ChatServer.Services
             }
         }
 
+        private async Task<string> HandleUpdateProfileAsync(ChatRequest request)
+        {
+            if (string.IsNullOrEmpty(request.SenderUsername))
+            {
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = false,
+                    Message = "Username is required."
+                });
+            }
+
+            try
+            {
+                // Lấy MATK từ username
+                var account = await _dbContext.GetUserAccountAsync(request.SenderUsername);
+                if (account == null)
+                {
+                    return JsonSerializer.Serialize(new ServerResponse
+                    {
+                        Success = false,
+                        Message = "User not found."
+                    });
+                }
+
+                // Cập nhật thông tin NGUOIDUNG
+                await _dbContext.UpdateUserProfileAsync(
+                    account.Matk,
+                    string.IsNullOrEmpty(request.Hovaten) ? null : request.Hovaten,
+                    string.IsNullOrEmpty(request.Email) ? null : request.Email,
+                    string.IsNullOrEmpty(request.Sdt) ? null : request.Sdt,
+                    string.IsNullOrEmpty(request.Diachi) ? null : request.Diachi,
+                    string.IsNullOrEmpty(request.Bio) ? null : request.Bio,
+                    string.IsNullOrEmpty(request.AvatarUrl) ? null : request.AvatarUrl
+                );
+
+                await _dbContext.WriteAuditLogAsync(account.Matk, "UPDATE_PROFILE", "Profile updated", account.ClearanceLevel);
+
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = true,
+                    Message = "Profile updated successfully."
+                });
+            }
+            catch (Exception ex)
+            {
+                return JsonSerializer.Serialize(new ServerResponse
+                {
+                    Success = false,
+                    Message = $"Failed to update profile: {ex.Message}"
+                });
+            }
+        }
+
         private async Task<string> HandleLeaveConversationAsync(ChatRequest request)
         {
             if (string.IsNullOrEmpty(request.ConversationId))
@@ -2351,40 +2451,71 @@ namespace ChatServer.Services
         public string Content { get; set; } = string.Empty;
         public int SecurityLabel { get; set; }
         public int ClearanceLevel { get; set; }
+        
+        // ========== Authentication ==========
         public string Password { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
-        public string Hovaten { get; set; } = string.Empty;
         public string Otp { get; set; } = string.Empty;
         public string NewPassword { get; set; } = string.Empty;
-        // Conversation fields
+        
+        // ========== User Profile (NGUOIDUNG) ==========
+        public string Email { get; set; } = string.Empty;
+        public string Hovaten { get; set; } = string.Empty;
+        public string Sdt { get; set; } = string.Empty;
+        public string Bio { get; set; } = string.Empty;
+        public string Diachi { get; set; } = string.Empty;
+        public string AvatarUrl { get; set; } = string.Empty;
+        
+        // ========== Conversation ==========
         public string ConversationId { get; set; } = string.Empty;
         public string ConversationName { get; set; } = string.Empty;
         public bool IsPrivateConversation { get; set; }
         public string TargetUsername { get; set; } = string.Empty;
         public int Limit { get; set; }
         public int MessageId { get; set; }
-        // Attachment fields
+        
+        // ========== Attachment ==========
         public string FileName { get; set; } = string.Empty;
         public string MimeType { get; set; } = string.Empty;
         public long FileSize { get; set; }
         public int AttachmentId { get; set; }
     }
 
+    /// <summary>
+    /// Response server trả về - đồng bộ với schema database
+    /// </summary>
     public class ServerResponse
     {
         public bool Success { get; set; }
         public string Message { get; set; } = string.Empty;
+        
+        // ========== DÙNG CHO LOGIN ==========
+        public string? Matk { get; set; }                    // MATK
+        public string? Username { get; set; }                // TENTK
+        public int ClearanceLevel { get; set; }              // CLEARANCELEVEL
+        public string? Mavaitro { get; set; }                // MAVAITRO
+        public bool IsBannedGlobal { get; set; }             // IS_BANNED_GLOBAL
+        public bool IsOtpVerified { get; set; }              // IS_OTP_VERIFIED
+        public DateTime NgayTao { get; set; }                // NGAYTAO
+        public DateTime? LastLogin { get; set; }             // LAST_LOGIN
+        public string? Email { get; set; }                   // EMAIL từ NGUOIDUNG
+        public string? Hovaten { get; set; }                 // HOVATEN từ NGUOIDUNG
+        public string? Sdt { get; set; }                     // SDT từ NGUOIDUNG
+        public string? PublicKey { get; set; }               // PUBLIC_KEY
+        
+        // ========== DÙNG CHO MESSAGES/CONVERSATIONS ==========
         public ChatMessageDto[] Messages { get; set; } = Array.Empty<ChatMessageDto>();
         public ConversationDto[] Conversations { get; set; } = Array.Empty<ConversationDto>();
         public MemberDto[] Members { get; set; } = Array.Empty<MemberDto>();
-        public int ClearanceLevel { get; set; }
         public string ConversationId { get; set; } = string.Empty;
         public int MessageId { get; set; }
+        
+        // ========== DÙNG CHO ATTACHMENT ==========
         public int AttachmentId { get; set; }
         public string AttachmentFileName { get; set; } = string.Empty;
         public string AttachmentMimeType { get; set; } = string.Empty;
         public string AttachmentContentBase64 { get; set; } = string.Empty;
-        // Admin DTOs
+        
+        // ========== ADMIN DTOs ==========
         public AdminUserDto[] AdminUsers { get; set; } = Array.Empty<AdminUserDto>();
         public AdminUserDto? AdminUser { get; set; }
         public AdminConversationDto[] AdminConversations { get; set; } = Array.Empty<AdminConversationDto>();
@@ -2452,24 +2583,60 @@ namespace ChatServer.Services
         public DateTime Timestamp { get; set; }
     }
 
+    /// <summary>
+    /// DTO tin nhắn - đồng bộ với bảng TINNHAN
+    /// </summary>
     public class ChatMessageDto
     {
-        public int MessageId { get; set; } // MATN
-        public string ConversationId { get; set; } = string.Empty; // MACTC
-        public string Sender { get; set; } = string.Empty; // MATK người gửi
-        public string Receiver { get; set; } = string.Empty; // MATK người nhận (nếu có)
-        public string Content { get; set; } = string.Empty; // NOIDUNG
-        public int SecurityLabel { get; set; } // SECURITYLABEL
-        public DateTime Timestamp { get; set; } // NGAYGUI
+        // Thông tin cơ bản
+        public int MessageId { get; set; }                          // MATN
+        public string ConversationId { get; set; } = string.Empty;  // MACTC
+        public string Sender { get; set; } = string.Empty;          // MATK người gửi
+        public string SenderUsername { get; set; } = string.Empty;  // TENTK người gửi (join)
+        public string Receiver { get; set; } = string.Empty;        // MATK người nhận (nếu có)
+        public string Content { get; set; } = string.Empty;         // NOIDUNG
+        public DateTime Timestamp { get; set; }                     // NGAYGUI
+        
+        // Loại và trạng thái
+        public string MessageType { get; set; } = "TEXT";           // MALOAITN
+        public string Status { get; set; } = "ACTIVE";              // MATRANGTHAI
+        public bool IsPinned { get; set; }                          // IS_PINNED
+        public DateTime? EditedAt { get; set; }                     // EDITED_AT
+        
+        // Bảo mật MAC
+        public int SecurityLabel { get; set; }                      // SECURITYLABEL
+        
+        // Mã hóa
+        public bool IsEncrypted { get; set; }                       // IS_ENCRYPTED
+        public string EncryptionType { get; set; } = "NONE";        // ENCRYPTION_TYPE
+        public string? EncryptedContent { get; set; }               // ENCRYPTED_CONTENT (base64)
+        public string? EncryptedKey { get; set; }                   // ENCRYPTED_KEY
+        public string? EncryptionIv { get; set; }                   // ENCRYPTION_IV
+        public string? Signature { get; set; }                      // SIGNATURE
+        
+        // Attachment
+        public int? AttachmentId { get; set; }
+        public string? AttachmentName { get; set; }
     }
 
+    /// <summary>
+    /// DTO cuộc trò chuyện - đồng bộ với bảng CUOCTROCHUYEN
+    /// </summary>
     public class ConversationDto
     {
-        public string ConversationId { get; set; } = string.Empty; // MACTC
-        public string ConversationName { get; set; } = string.Empty; // TENCTC
-        public bool IsPrivate { get; set; } // IS_PRIVATE = 'Y' or 'N'
-        public DateTime CreatedAt { get; set; } // NGAYTAO
-        public int MemberCount { get; set; } // Số lượng thành viên
+        public string ConversationId { get; set; } = string.Empty;  // MACTC
+        public string ConversationName { get; set; } = string.Empty;// TENCTC
+        public string ConversationType { get; set; } = "GROUP";     // MALOAICTC
+        public bool IsPrivate { get; set; }                         // IS_PRIVATE
+        public string Owner { get; set; } = string.Empty;           // NGUOIQL
+        public string CreatedBy { get; set; } = string.Empty;       // CREATED_BY
+        public DateTime CreatedAt { get; set; }                     // NGAYTAO
+        public int MinClearance { get; set; } = 1;                  // MIN_CLEARANCE
+        public bool IsEncrypted { get; set; }                       // IS_ENCRYPTED
+        public bool IsArchived { get; set; }                        // IS_ARCHIVED
+        public DateTime? LastMessageTime { get; set; }              // THOIGIANTINNHANCUOI
+        public int MemberCount { get; set; }
+        public int MessageCount { get; set; }
     }
 
     public class MemberDto

@@ -45,6 +45,7 @@ namespace ChatServer.Forms
             btnDeleteUser.Click += async (_, _) => await DeleteUserAsync();
             btnBanUser.Click += async (_, _) => await BanUserAsync();
             btnUnbanUser.Click += async (_, _) => await UnbanUserAsync();
+            btnUnlockAccount.Click += async (_, _) => await UnlockAccountAsync();
 
             btnRefreshConversations.Click += async (_, _) => await LoadConversationsAsync();
             btnDeleteConversation.Click += async (_, _) => await DeleteConversationAsync();
@@ -55,16 +56,8 @@ namespace ChatServer.Forms
 
             btnRefreshLogs.Click += async (_, _) => await LoadAuditLogsAsync();
             
-            // Policy Management button (add to designer first)
-            try
-            {
-                var btnPolicyMgmt = this.Controls.Find("btnPolicyManagement", true).FirstOrDefault() as Button;
-                if (btnPolicyMgmt != null)
-                {
-                    btnPolicyMgmt.Click += (_, _) => OpenPolicyManagement();
-                }
-            }
-            catch { }
+            // Policy Management button - gắn trực tiếp
+            btnPolicyManagement.Click += (_, _) => OpenPolicyManagement();
 
             tabControl.SelectedIndexChanged += async (_, _) => await OnTabChangedAsync();
         }
@@ -285,6 +278,32 @@ namespace ChatServer.Forms
             catch (Exception ex)
             {
                 MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private async Task UnlockAccountAsync()
+        {
+            if (dgvUsers.SelectedRows.Count == 0)
+            {
+                MessageBox.Show("Vui lòng chọn một user để mở khóa.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var matk = dgvUsers.SelectedRows[0].Cells["Matk"].Value?.ToString();
+            var username = dgvUsers.SelectedRows[0].Cells["Username"].Value?.ToString();
+            if (string.IsNullOrEmpty(matk))
+                return;
+
+            try
+            {
+                await _dbContext.UnlockAccountAsync(matk);
+                await _dbContext.WriteAuditLogAsync(_adminUsername, "ADMIN_UNLOCK_ACCOUNT", username ?? matk, 0);
+                MessageBox.Show($"Đã mở khóa tài khoản {username}.\nUser có thể đăng nhập lại.", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                await LoadUsersAsync();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

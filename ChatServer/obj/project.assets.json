@@ -934,11 +934,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\Lenovo\\Desktop\\ChatApplication\\ChatServer\\ChatServer.csproj",
+      "projectUniqueName": "C:\\Users\\Lenovo\\Desktop\\ChatApplication-main\\ChatServer\\ChatServer.csproj",
       "projectName": "ChatServer",
-      "projectPath": "C:\\Users\\Lenovo\\Desktop\\ChatApplication\\ChatServer\\ChatServer.csproj",
+      "projectPath": "C:\\Users\\Lenovo\\Desktop\\ChatApplication-main\\ChatServer\\ChatServer.csproj",
       "packagesPath": "C:\\Users\\Lenovo\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\Lenovo\\Desktop\\ChatApplication\\ChatServer\\obj\\",
+      "outputPath": "C:\\Users\\Lenovo\\Desktop\\ChatApplication-main\\ChatServer\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

@@ -249,12 +249,22 @@ namespace ChatClient.Forms
                 lblStatus.Text = "✓ Đăng nhập thành công!";
                 lblStatus.ForeColor = System.Drawing.Color.FromArgb(40, 167, 69);
                 
+                // Tạo User model đầy đủ từ response
                 var user = new User
                 {
-                    Matk = username, // MATK = TENTK trong trường hợp này
-                    Username = username, // TENTK
+                    Matk = response.Matk ?? username,
+                    Username = response.Username ?? username,
                     Password = password,
-                    ClearanceLevel = response.ClearanceLevel
+                    ClearanceLevel = response.ClearanceLevel,
+                    Mavaitro = response.Mavaitro ?? string.Empty,
+                    IsBannedGlobal = response.IsBannedGlobal,
+                    IsOtpVerified = response.IsOtpVerified,
+                    NgayTao = response.NgayTao,
+                    LastLogin = response.LastLogin,
+                    Email = response.Email ?? string.Empty,
+                    Hovaten = response.Hovaten ?? string.Empty,
+                    Sdt = response.Sdt ?? string.Empty,
+                    PublicKey = response.PublicKey ?? string.Empty
                 };
 
                 SaveOrClearRemembered(username);
@@ -268,9 +278,9 @@ namespace ChatClient.Forms
                     // If user logged out (DialogResult.Cancel), show login form again
                     if (chatForm.DialogResult == DialogResult.Cancel)
                     {
+                        // Reset LoginForm state completely
+                        ResetLoginFormState();
                         this.Show();
-                        // Clear password for security
-                        txtPassword.Text = "";
                         txtUsername.Focus();
                     }
                     else
@@ -299,6 +309,22 @@ namespace ChatClient.Forms
         {
             var forgotForm = new ForgotPasswordForm();
             forgotForm.ShowDialog();
+        }
+
+        /// <summary>
+        /// Reset toàn bộ trạng thái LoginForm sau khi đăng xuất
+        /// </summary>
+        private void ResetLoginFormState()
+        {
+            // Reset controls
+            btnLogin.Enabled = true;
+            txtPassword.Text = string.Empty;
+            txtCaptcha.Text = string.Empty;
+            lblStatus.Text = string.Empty;
+            lblStatus.ForeColor = System.Drawing.Color.Red;
+            
+            // Reload captcha mới
+            LoadCaptcha();
         }
 
         private class LoginData

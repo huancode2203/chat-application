@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "Y/b1PLRDGGY=",
+  "dgSpecHash": "X6hxhl9W+2w=",
   "success": true,
-  "projectFilePath": "C:\\Users\\Lenovo\\Desktop\\ChatApplication\\ChatServer\\ChatServer.csproj",
+  "projectFilePath": "C:\\Users\\Lenovo\\Desktop\\ChatApplication-main\\ChatServer\\ChatServer.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Lenovo\\.nuget\\packages\\microsoft.extensions.configuration\\9.0.0\\microsoft.extensions.configuration.9.0.0.nupkg.sha512",
     "C:\\Users\\Lenovo\\.nuget\\packages\\microsoft.extensions.configuration.abstractions\\9.0.0\\microsoft.extensions.configuration.abstractions.9.0.0.nupkg.sha512",

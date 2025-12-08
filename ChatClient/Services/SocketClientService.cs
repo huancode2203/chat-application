@@ -103,6 +103,29 @@ namespace ChatClient.Services
             return JsonSerializer.Deserialize<ServerResponse>(responseJson);
         }
 
+        /// <summary>
+        /// Cập nhật profile của chính user hiện tại (hovaten, email, sdt, bio).
+        /// </summary>
+        public async Task<ServerResponse?> UpdateUserProfileAsync(User currentUser, string? hovaten = null, 
+            string? email = null, string? sdt = null, string? bio = null)
+        {
+            var request = new ChatRequest
+            {
+                Action = "UpdateProfile",
+                SenderUsername = currentUser.Username,
+                ClearanceLevel = currentUser.ClearanceLevel,
+                Hovaten = hovaten ?? string.Empty,
+                Email = email ?? string.Empty,
+                Sdt = sdt ?? string.Empty,
+                Bio = bio ?? string.Empty
+            };
+
+            var responseJson = await SendRequestAsync(request);
+            if (responseJson == null) return null;
+
+            return JsonSerializer.Deserialize<ServerResponse>(responseJson);
+        }
+
         private static string GetMimeTypeFromFileName(string fileName)
         {
             var ext = Path.GetExtension(fileName).ToLowerInvariant();
@@ -844,7 +867,7 @@ namespace ChatClient.Services
     }
 
     /// <summary>
-    /// DTO request gửi qua socket (sau đó sẽ được mã hóa).
+    /// DTO request gửi qua socket - đồng bộ với schema database
     /// </summary>
     public class ChatRequest
     {
@@ -854,20 +877,29 @@ namespace ChatClient.Services
         public string Content { get; set; } = string.Empty;
         public int SecurityLabel { get; set; }
         public int ClearanceLevel { get; set; }
-        // Thêm các field cho authentication
+        
+        // ========== Authentication ==========
         public string Password { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
-        public string Hovaten { get; set; } = string.Empty;
         public string Otp { get; set; } = string.Empty;
         public string NewPassword { get; set; } = string.Empty;
-        // Conversation fields
+        
+        // ========== User Profile (NGUOIDUNG) ==========
+        public string Email { get; set; } = string.Empty;
+        public string Hovaten { get; set; } = string.Empty;
+        public string Sdt { get; set; } = string.Empty;
+        public string Bio { get; set; } = string.Empty;
+        public string Diachi { get; set; } = string.Empty;
+        public string AvatarUrl { get; set; } = string.Empty;
+        
+        // ========== Conversation ==========
         public string ConversationId { get; set; } = string.Empty; // MACTC
         public string ConversationName { get; set; } = string.Empty; // TENCTC
         public bool IsPrivateConversation { get; set; }
         public string TargetUsername { get; set; } = string.Empty; // MATK của người dùng đích
         public int Limit { get; set; }
         public int MessageId { get; set; }
-        // Attachment fields
+        
+        // ========== Attachment ==========
         public string FileName { get; set; } = string.Empty;
         public string MimeType { get; set; } = string.Empty;
         public long FileSize { get; set; }
@@ -876,21 +908,41 @@ namespace ChatClient.Services
 
     /// <summary>
     /// DTO response server trả về (trước khi mã hóa).
+    /// Đồng bộ với schema database.
     /// </summary>
     public class ServerResponse
     {
         public bool Success { get; set; }
         public string Message { get; set; } = string.Empty;
+        
+        // ========== DÙNG CHO LOGIN ==========
+        public string? Matk { get; set; }                    // MATK
+        public string? Username { get; set; }                // TENTK
+        public int ClearanceLevel { get; set; }              // CLEARANCELEVEL
+        public string? Mavaitro { get; set; }                // MAVAITRO
+        public bool IsBannedGlobal { get; set; }             // IS_BANNED_GLOBAL
+        public bool IsOtpVerified { get; set; }              // IS_OTP_VERIFIED
+        public DateTime NgayTao { get; set; }                // NGAYTAO
+        public DateTime? LastLogin { get; set; }             // LAST_LOGIN
+        public string? Email { get; set; }                   // EMAIL từ NGUOIDUNG
+        public string? Hovaten { get; set; }                 // HOVATEN từ NGUOIDUNG
+        public string? Sdt { get; set; }                     // SDT từ NGUOIDUNG
+        public string? PublicKey { get; set; }               // PUBLIC_KEY
+        
+        // ========== DÙNG CHO MESSAGES/CONVERSATIONS ==========
         public ChatMessageDto[] Messages { get; set; } = Array.Empty<ChatMessageDto>();
         public ConversationDto[] Conversations { get; set; } = Array.Empty<ConversationDto>();
         public MemberDto[] Members { get; set; } = Array.Empty<MemberDto>();
-        public int ClearanceLevel { get; set; }
         public string ConversationId { get; set; } = string.Empty;
         public int MessageId { get; set; }
+        
+        // ========== DÙNG CHO ATTACHMENT ==========
         public int AttachmentId { get; set; }
         public string AttachmentFileName { get; set; } = string.Empty;
         public string AttachmentMimeType { get; set; } = string.Empty;
         public string AttachmentContentBase64 { get; set; } = string.Empty;
+        
+        // ========== DÙNG CHO ADMIN ==========
         public AdminUserDto? AdminUser { get; set; }
         public string[] UserList { get; set; } = Array.Empty<string>();
         public ConversationStatusDto? ConversationStatus { get; set; }
@@ -904,24 +956,60 @@ namespace ChatClient.Services
         public bool IsOwner { get; set; }
     }
 
+    /// <summary>
+    /// DTO tin nhắn - đồng bộ với bảng TINNHAN
+    /// </summary>
     public class ChatMessageDto
     {
-        public int MessageId { get; set; } // MATN
-        public string ConversationId { get; set; } = string.Empty; // MACTC
-        public string Sender { get; set; } = string.Empty; // MATK người gửi
-        public string Receiver { get; set; } = string.Empty; // MATK người nhận (nếu có)
-        public string Content { get; set; } = string.Empty; // NOIDUNG
-        public int SecurityLabel { get; set; } // SECURITYLABEL
-        public DateTime Timestamp { get; set; } // NGAYGUI
+        // Thông tin cơ bản
+        public int MessageId { get; set; }                          // MATN
+        public string ConversationId { get; set; } = string.Empty;  // MACTC
+        public string Sender { get; set; } = string.Empty;          // MATK người gửi
+        public string SenderUsername { get; set; } = string.Empty;  // TENTK người gửi (join)
+        public string Receiver { get; set; } = string.Empty;        // MATK người nhận (nếu có)
+        public string Content { get; set; } = string.Empty;         // NOIDUNG
+        public DateTime Timestamp { get; set; }                     // NGAYGUI
+        
+        // Loại và trạng thái
+        public string MessageType { get; set; } = "TEXT";           // MALOAITN
+        public string Status { get; set; } = "ACTIVE";              // MATRANGTHAI
+        public bool IsPinned { get; set; }                          // IS_PINNED
+        public DateTime? EditedAt { get; set; }                     // EDITED_AT
+        
+        // Bảo mật MAC
+        public int SecurityLabel { get; set; }                      // SECURITYLABEL
+        
+        // Mã hóa
+        public bool IsEncrypted { get; set; }                       // IS_ENCRYPTED
+        public string EncryptionType { get; set; } = "NONE";        // ENCRYPTION_TYPE
+        public string? EncryptedContent { get; set; }               // ENCRYPTED_CONTENT (base64)
+        public string? EncryptedKey { get; set; }                   // ENCRYPTED_KEY
+        public string? EncryptionIv { get; set; }                   // ENCRYPTION_IV
+        public string? Signature { get; set; }                      // SIGNATURE
+        
+        // Attachment
+        public int? AttachmentId { get; set; }
+        public string? AttachmentName { get; set; }
     }
 
+    /// <summary>
+    /// DTO cuộc trò chuyện - đồng bộ với bảng CUOCTROCHUYEN
+    /// </summary>
     public class ConversationDto
     {
-        public string ConversationId { get; set; } = string.Empty; // MACTC
-        public string ConversationName { get; set; } = string.Empty; // TENCTC
-        public bool IsPrivate { get; set; } // IS_PRIVATE
-        public DateTime CreatedAt { get; set; } // NGAYTAO
-        public int MemberCount { get; set; } // Số lượng thành viên
+        public string ConversationId { get; set; } = string.Empty;  // MACTC
+        public string ConversationName { get; set; } = string.Empty;// TENCTC
+        public string ConversationType { get; set; } = "GROUP";     // MALOAICTC
+        public bool IsPrivate { get; set; }                         // IS_PRIVATE
+        public string Owner { get; set; } = string.Empty;           // NGUOIQL
+        public string CreatedBy { get; set; } = string.Empty;       // CREATED_BY
+        public DateTime CreatedAt { get; set; }                     // NGAYTAO
+        public int MinClearance { get; set; } = 1;                  // MIN_CLEARANCE
+        public bool IsEncrypted { get; set; }                       // IS_ENCRYPTED
+        public bool IsArchived { get; set; }                        // IS_ARCHIVED
+        public DateTime? LastMessageTime { get; set; }              // THOIGIANTINNHANCUOI
+        public int MemberCount { get; set; }
+        public int MessageCount { get; set; }
     }
 
     public class MemberDto

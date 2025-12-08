@@ -18,6 +18,7 @@ namespace ChatServer.Forms
         private System.Windows.Forms.Button btnDeleteUser;
         private System.Windows.Forms.Button btnBanUser;
         private System.Windows.Forms.Button btnUnbanUser;
+        private System.Windows.Forms.Button btnUnlockAccount;
         private System.Windows.Forms.Button btnRefreshConversations;
         private System.Windows.Forms.Button btnDeleteConversation;
         private System.Windows.Forms.Button btnViewMessages;
@@ -49,6 +50,7 @@ namespace ChatServer.Forms
             btnDeleteUser = new System.Windows.Forms.Button();
             btnBanUser = new System.Windows.Forms.Button();
             btnUnbanUser = new System.Windows.Forms.Button();
+            btnUnlockAccount = new System.Windows.Forms.Button();
             tabConversations = new System.Windows.Forms.TabPage();
             dgvConversations = new System.Windows.Forms.DataGridView();
             btnRefreshConversations = new System.Windows.Forms.Button();
@@ -97,6 +99,7 @@ namespace ChatServer.Forms
             tabUsers.Controls.Add(btnDeleteUser);
             tabUsers.Controls.Add(btnBanUser);
             tabUsers.Controls.Add(btnUnbanUser);
+            tabUsers.Controls.Add(btnUnlockAccount);
             tabUsers.Location = new System.Drawing.Point(4, 34);
             tabUsers.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
             tabUsers.Name = "tabUsers";
@@ -181,6 +184,16 @@ namespace ChatServer.Forms
             btnUnbanUser.TabIndex = 6;
             btnUnbanUser.Text = "Bỏ cấm";
             btnUnbanUser.UseVisualStyleBackColor = true;
+            // 
+            // btnUnlockAccount
+            // 
+            btnUnlockAccount.Location = new System.Drawing.Point(1140, 20);
+            btnUnlockAccount.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
+            btnUnlockAccount.Name = "btnUnlockAccount";
+            btnUnlockAccount.Size = new System.Drawing.Size(172, 60);
+            btnUnlockAccount.TabIndex = 7;
+            btnUnlockAccount.Text = "🔓 Mở khóa";
+            btnUnlockAccount.UseVisualStyleBackColor = true;
             // 
             // tabConversations
             // 

@@ -29,12 +29,16 @@ namespace ChatClient.Forms
         private TextBox txtEmail;
         private Label lblPhoneTitle;
         private TextBox txtPhone;
+        private Label lblDiachiTitle;
+        private TextBox txtDiachi;
         private Label lblBioTitle;
         private TextBox txtBio;
         private Label lblDepartmentTitle;
         private ComboBox cboDepartment;
         private Label lblPositionTitle;
         private ComboBox cboPosition;
+        private Label lblNgaysinhTitle;
+        private DateTimePicker dtpNgaysinh;
         private Button btnEdit;
         private Button btnSave;
         private Button btnCancel;
@@ -42,6 +46,7 @@ namespace ChatClient.Forms
         private Button btnSendMessage; // For viewing other users
         private Panel pnlButtons;
         private Label lblMemberSince;
+        private Label lblClearanceLevel;
 
         public UserProfileForm(SocketClientService socketClient, User currentUser, string? viewingMatk = null)
         {
@@ -63,7 +68,7 @@ namespace ChatClient.Forms
             this.SuspendLayout();
 
             // Form settings - Made wider with better spacing
-            this.ClientSize = new Size(700, 650);
+            this.ClientSize = new Size(700, 720);
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
             this.MinimizeBox = false;
@@ -107,7 +112,7 @@ namespace ChatClient.Forms
             pnlInfo = new Panel
             {
                 Location = new Point(50, 200),
-                Size = new Size(600, 340),
+                Size = new Size(600, 380),
                 BackColor = Color.White,
                 BorderStyle = BorderStyle.None
             };
@@ -169,10 +174,50 @@ namespace ChatClient.Forms
                 ReadOnly = true
             };
 
+            // Địa chỉ
+            lblDiachiTitle = new Label
+            {
+                Location = new Point(20, 135),
+                Size = new Size(150, 25),
+                Text = "Địa chỉ:",
+                Font = new Font("Segoe UI", 10F),
+                ForeColor = Color.FromArgb(108, 117, 125)
+            };
+
+            txtDiachi = new TextBox
+            {
+                Location = new Point(200, 132),
+                Size = new Size(370, 25),
+                Font = new Font("Segoe UI", 10F),
+                BorderStyle = BorderStyle.FixedSingle,
+                ReadOnly = true
+            };
+
+            // Ngày sinh
+            lblNgaysinhTitle = new Label
+            {
+                Location = new Point(20, 170),
+                Size = new Size(150, 25),
+                Text = "Ngày sinh:",
+                Font = new Font("Segoe UI", 10F),
+                ForeColor = Color.FromArgb(108, 117, 125)
+            };
+
+            dtpNgaysinh = new DateTimePicker
+            {
+                Location = new Point(200, 167),
+                Size = new Size(180, 25),
+                Font = new Font("Segoe UI", 10F),
+                Format = DateTimePickerFormat.Short,
+                ShowCheckBox = true,
+                Checked = false,
+                Enabled = false
+            };
+
             // Department
             lblDepartmentTitle = new Label
             {
-                Location = new Point(20, 135),
+                Location = new Point(20, 205),
                 Size = new Size(150, 25),
                 Text = "Phòng ban:",
                 Font = new Font("Segoe UI", 10F),
@@ -181,20 +226,20 @@ namespace ChatClient.Forms
 
             cboDepartment = new ComboBox
             {
-                Location = new Point(200, 132),
+                Location = new Point(200, 202),
                 Size = new Size(370, 25),
                 Font = new Font("Segoe UI", 10F),
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 Enabled = false
             };
             cboDepartment.Items.AddRange(new object[] {
-                "Ban Giám Đốc", "Phòng Kế Toán", "Phòng Kinh Doanh", "Phòng Nhân Sự", "Phòng IT"
+                "", "Ban Giám Đốc", "Phòng Kế Toán", "Phòng Kinh Doanh", "Phòng Nhân Sự", "Phòng IT"
             });
 
             // Position
             lblPositionTitle = new Label
             {
-                Location = new Point(20, 170),
+                Location = new Point(20, 240),
                 Size = new Size(150, 25),
                 Text = "Chức vụ:",
                 Font = new Font("Segoe UI", 10F),
@@ -203,20 +248,20 @@ namespace ChatClient.Forms
 
             cboPosition = new ComboBox
             {
-                Location = new Point(200, 167),
+                Location = new Point(200, 237),
                 Size = new Size(370, 25),
                 Font = new Font("Segoe UI", 10F),
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 Enabled = false
             };
             cboPosition.Items.AddRange(new object[] {
-                "Giám Đốc", "Phó Giám Đốc", "Trưởng Phòng", "Phó Phòng", "Nhân Viên", "Thực Tập Sinh"
+                "", "Giám Đốc", "Phó Giám Đốc", "Trưởng Phòng", "Phó Phòng", "Nhân Viên", "Thực Tập Sinh"
             });
 
             // Bio
             lblBioTitle = new Label
             {
-                Location = new Point(20, 210),
+                Location = new Point(20, 275),
                 Size = new Size(150, 25),
                 Text = "Giới thiệu:",
                 Font = new Font("Segoe UI", 10F),
@@ -225,8 +270,8 @@ namespace ChatClient.Forms
 
             txtBio = new TextBox
             {
-                Location = new Point(200, 210),
-                Size = new Size(370, 70),
+                Location = new Point(200, 275),
+                Size = new Size(370, 50),
                 Font = new Font("Segoe UI", 10F),
                 BorderStyle = BorderStyle.FixedSingle,
                 Multiline = true,
@@ -234,12 +279,22 @@ namespace ChatClient.Forms
                 ScrollBars = ScrollBars.Vertical
             };
 
-            // Member Since
+            // Member Since & Clearance Level
             lblMemberSince = new Label
             {
-                Location = new Point(20, 295),
-                Size = new Size(560, 25),
-                Text = "Thành viên từ: ...",
+                Location = new Point(20, 335),
+                Size = new Size(280, 25),
+                Text = "📅 Thành viên từ: ...",
+                Font = new Font("Segoe UI", 9F),
+                ForeColor = Color.FromArgb(144, 149, 160),
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+
+            lblClearanceLevel = new Label
+            {
+                Location = new Point(310, 335),
+                Size = new Size(260, 25),
+                Text = "🔐 Mức bảo mật: ...",
                 Font = new Font("Segoe UI", 9F),
                 ForeColor = Color.FromArgb(144, 149, 160),
                 TextAlign = ContentAlignment.MiddleLeft
@@ -249,16 +304,18 @@ namespace ChatClient.Forms
                 lblFullNameTitle, txtFullName,
                 lblEmailTitle, txtEmail,
                 lblPhoneTitle, txtPhone,
+                lblDiachiTitle, txtDiachi,
+                lblNgaysinhTitle, dtpNgaysinh,
                 lblDepartmentTitle, cboDepartment,
                 lblPositionTitle, cboPosition,
                 lblBioTitle, txtBio,
-                lblMemberSince
+                lblMemberSince, lblClearanceLevel
             });
 
             // Buttons Panel
             pnlButtons = new Panel
             {
-                Location = new Point(50, 555),
+                Location = new Point(50, 595),
                 Size = new Size(600, 55),
                 BackColor = Color.Transparent
             };
@@ -395,19 +452,65 @@ namespace ChatClient.Forms
         {
             try
             {
-                // TODO: Get full profile from server in future
-                // For now, use current user data from login
-                
-                lblUsername.Text = _currentUser.Username;
-                txtFullName.Text = _currentUser.Username; // TODO: Load from NGUOIDUNG table
-                txtEmail.Text = ""; // TODO: Load from NGUOIDUNG table
-                txtPhone.Text = "";
-                txtBio.Text = "";
-                lblMemberSince.Text = "📅 Thành viên từ: N/A";
-                lblStatus.Text = "🟢 Trực tuyến";
+                if (_isOwnProfile)
+                {
+                    // Sử dụng thông tin từ User model đã có sẵn
+                    lblUsername.Text = _currentUser.Username;
+                    txtFullName.Text = !string.IsNullOrEmpty(_currentUser.Hovaten) 
+                        ? _currentUser.Hovaten 
+                        : _currentUser.Username;
+                    txtEmail.Text = _currentUser.Email ?? string.Empty;
+                    txtPhone.Text = _currentUser.Sdt ?? string.Empty;
+                    txtDiachi.Text = _currentUser.Diachi ?? string.Empty;
+                    txtBio.Text = _currentUser.Bio ?? string.Empty;
+                    
+                    // Ngày sinh
+                    if (_currentUser.Ngaysinh.HasValue)
+                    {
+                        dtpNgaysinh.Checked = true;
+                        dtpNgaysinh.Value = _currentUser.Ngaysinh.Value;
+                    }
+                    
+                    // Thời gian tham gia
+                    var memberSince = _currentUser.NgayTao != default 
+                        ? _currentUser.NgayTao.ToString("dd/MM/yyyy") 
+                        : "N/A";
+                    lblMemberSince.Text = $"📅 Thành viên từ: {memberSince}";
+                    
+                    // Mức bảo mật
+                    lblClearanceLevel.Text = $"🔐 Mức bảo mật: {_currentUser.ClearanceLevel}";
+                    
+                    // Trạng thái
+                    lblStatus.Text = _currentUser.IsBannedGlobal 
+                        ? "🔴 Đã bị khóa" 
+                        : "🟢 Trực tuyến";
+                }
+                else
+                {
+                    // Lấy thông tin từ server cho user khác
+                    var response = await _socketClient.GetUserDetailsAsync(_currentUser, _viewingMatk!);
+                    if (response?.Success == true && response.AdminUser != null)
+                    {
+                        var user = response.AdminUser;
+                        lblUsername.Text = user.Username;
+                        txtFullName.Text = !string.IsNullOrEmpty(user.Hovaten) ? user.Hovaten : user.Username;
+                        txtEmail.Text = user.Email ?? string.Empty;
+                        txtPhone.Text = user.Phone ?? string.Empty;
+                        txtDiachi.Text = string.Empty;
+                        txtBio.Text = string.Empty;
+                        lblMemberSince.Text = $"📅 Thành viên từ: {user.NgayTao:dd/MM/yyyy}";
+                        lblClearanceLevel.Text = $"🔐 Mức bảo mật: {user.ClearanceLevel}";
+                        lblStatus.Text = user.IsBannedGlobal ? "🔴 Đã bị khóa" : "⚪ Ngoại tuyến";
+                    }
+                    else
+                    {
+                        lblUsername.Text = _viewingMatk ?? "Unknown";
+                        txtFullName.Text = string.Empty;
+                        lblStatus.Text = "❓ Không thể tải thông tin";
+                    }
+                }
                 
                 picAvatar.Invalidate();
-                
                 await Task.CompletedTask;
             }
             catch (Exception ex)
@@ -423,13 +526,16 @@ namespace ChatClient.Forms
             txtFullName.ReadOnly = false;
             txtEmail.ReadOnly = false;
             txtPhone.ReadOnly = false;
+            txtDiachi.ReadOnly = false;
             txtBio.ReadOnly = false;
+            dtpNgaysinh.Enabled = true;
             cboDepartment.Enabled = true;
             cboPosition.Enabled = true;
 
             txtFullName.BackColor = Color.White;
             txtEmail.BackColor = Color.White;
             txtPhone.BackColor = Color.White;
+            txtDiachi.BackColor = Color.White;
             txtBio.BackColor = Color.White;
 
             btnEdit.Visible = false;
@@ -444,13 +550,16 @@ namespace ChatClient.Forms
             txtFullName.ReadOnly = true;
             txtEmail.ReadOnly = true;
             txtPhone.ReadOnly = true;
+            txtDiachi.ReadOnly = true;
             txtBio.ReadOnly = true;
+            dtpNgaysinh.Enabled = false;
             cboDepartment.Enabled = false;
             cboPosition.Enabled = false;
 
             txtFullName.BackColor = SystemColors.Control;
             txtEmail.BackColor = SystemColors.Control;
             txtPhone.BackColor = SystemColors.Control;
+            txtDiachi.BackColor = SystemColors.Control;
             txtBio.BackColor = SystemColors.Control;
 
             btnEdit.Visible = true;
@@ -475,13 +584,32 @@ namespace ChatClient.Forms
 
                 btnSave.Enabled = false;
 
-                // TODO: Call API to update user profile
-                // var response = await _socketClient.UpdateUserProfileAsync(...);
+                // Gọi API cập nhật profile
+                var response = await _socketClient.UpdateUserProfileAsync(
+                    _currentUser,
+                    txtFullName.Text.Trim(),
+                    txtEmail.Text.Trim(),
+                    txtPhone.Text.Trim(),
+                    txtBio.Text.Trim()
+                );
 
-                MessageBox.Show("Cập nhật thông tin thành công!", "Thành công",
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                if (response?.Success == true)
+                {
+                    // Cập nhật lại thông tin trong User model local
+                    _currentUser.Hovaten = txtFullName.Text.Trim();
+                    _currentUser.Email = txtEmail.Text.Trim();
+                    _currentUser.Sdt = txtPhone.Text.Trim();
+                    _currentUser.Bio = txtBio.Text.Trim();
 
-                ExitEditMode();
+                    MessageBox.Show("Cập nhật thông tin thành công!", "Thành công",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    ExitEditMode();
+                }
+                else
+                {
+                    MessageBox.Show(response?.Message ?? "Lỗi không xác định", "Lỗi",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
             catch (Exception ex)
             {

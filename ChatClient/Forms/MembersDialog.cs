@@ -455,7 +455,7 @@ namespace ChatClient.Forms
                 return;
             }
 
-            var isMuted = lstMembers.SelectedItems[0].SubItems[2].Text.Contains("Tắt tiếng");
+            var isMuted = lstMembers.SelectedItems[0].SubItems[3].Text.Contains("Tắt tiếng");
             if (isMuted)
             {
                 MessageBox.Show("Thành viên này đã bị tắt tiếng!", "Thông báo",
@@ -502,7 +502,7 @@ namespace ChatClient.Forms
             var username = lstMembers.SelectedItems[0].Tag?.ToString();
             if (string.IsNullOrEmpty(username)) return;
 
-            var isMuted = lstMembers.SelectedItems[0].SubItems[2].Text.Contains("Tắt tiếng");
+            var isMuted = lstMembers.SelectedItems[0].SubItems[3].Text.Contains("Tắt tiếng");
             if (!isMuted)
             {
                 MessageBox.Show("Thành viên này chưa bị tắt tiếng!", "Thông báo",

@@ -19,8 +19,12 @@ namespace ChatServer.Forms
         private TabControl tabControl;
         private TabPage tabVPD;
         private TabPage tabFGA;
+        private TabPage tabAdminPolicy;
+        private TabPage tabPolicyLogs;
         private DataGridView dgvVPDPolicies;
         private DataGridView dgvFGAPolicies;
+        private DataGridView dgvAdminPolicies;
+        private DataGridView dgvPolicyLogs;
         private Button btnRefresh;
         private Button btnClose;
         private Label lblTitle;
@@ -70,6 +74,16 @@ namespace ChatServer.Forms
             tabFGA = new TabPage("FGA Audit Policies");
             SetupFGATab();
             tabControl.TabPages.Add(tabFGA);
+
+            // Admin Policy Tab (Quản lý từ bảng ADMIN_POLICY)
+            tabAdminPolicy = new TabPage("📋 Quản lý Policies");
+            SetupAdminPolicyTab();
+            tabControl.TabPages.Add(tabAdminPolicy);
+
+            // Policy Change Logs Tab
+            tabPolicyLogs = new TabPage("📜 Lịch sử thay đổi");
+            SetupPolicyLogsTab();
+            tabControl.TabPages.Add(tabPolicyLogs);
 
             btnRefresh = new Button
             {
@@ -831,6 +845,451 @@ namespace ChatServer.Forms
 
         #endregion
 
+        #region Admin Policy Operations (Bảng ADMIN_POLICY)
+
+        private void SetupAdminPolicyTab()
+        {
+            var lblInfo = new Label
+            {
+                Text = "Quản lý tất cả Policies từ bảng ADMIN_POLICY (DAC, MAC, VPD, FGA, RBAC, OLS)",
+                Location = new Point(10, 10),
+                AutoSize = true,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold)
+            };
+
+            dgvAdminPolicies = new DataGridView
+            {
+                Location = new Point(10, 40),
+                Size = new Size(900, 300),
+                AllowUserToAddRows = false,
+                AllowUserToDeleteRows = false,
+                ReadOnly = true,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                BackgroundColor = Color.White
+            };
+
+            var btnAddPolicy = new Button
+            {
+                Text = "➕ Thêm Policy",
+                Size = new Size(130, 30),
+                Location = new Point(10, 350),
+                BackColor = Color.FromArgb(40, 167, 69),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand
+            };
+            btnAddPolicy.FlatAppearance.BorderSize = 0;
+            btnAddPolicy.Click += (s, e) => ShowAddAdminPolicyDialog();
+
+            var btnEditPolicy = new Button
+            {
+                Text = "✏️ Sửa Policy",
+                Size = new Size(130, 30),
+                Location = new Point(150, 350),
+                BackColor = Color.FromArgb(0, 123, 255),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand
+            };
+            btnEditPolicy.FlatAppearance.BorderSize = 0;
+            btnEditPolicy.Click += (s, e) => ShowEditAdminPolicyDialog();
+
+            var btnEnablePolicy = new Button
+            {
+                Text = "✓ Bật",
+                Size = new Size(80, 30),
+                Location = new Point(290, 350),
+                BackColor = Color.FromArgb(40, 167, 69),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand
+            };
+            btnEnablePolicy.FlatAppearance.BorderSize = 0;
+            btnEnablePolicy.Click += async (s, e) => await ToggleAdminPolicyAsync(true);
+
+            var btnDisablePolicy = new Button
+            {
+                Text = "✗ Tắt",
+                Size = new Size(80, 30),
+                Location = new Point(380, 350),
+                BackColor = Color.FromArgb(255, 193, 7),
+                ForeColor = Color.Black,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand
+            };
+            btnDisablePolicy.FlatAppearance.BorderSize = 0;
+            btnDisablePolicy.Click += async (s, e) => await ToggleAdminPolicyAsync(false);
+
+            var btnDeletePolicy = new Button
+            {
+                Text = "🗑️ Xóa",
+                Size = new Size(80, 30),
+                Location = new Point(470, 350),
+                BackColor = Color.FromArgb(220, 53, 69),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand
+            };
+            btnDeletePolicy.FlatAppearance.BorderSize = 0;
+            btnDeletePolicy.Click += async (s, e) => await DeleteAdminPolicyAsync();
+
+            var txtInfo = new TextBox
+            {
+                Location = new Point(10, 390),
+                Size = new Size(900, 80),
+                Multiline = true,
+                ReadOnly = true,
+                BackColor = Color.FromArgb(245, 247, 250),
+                Text = "Bảng ADMIN_POLICY lưu trữ metadata của tất cả policies trong hệ thống.\n" +
+                       "Các loại policy: VPD (Row-Level Security), FGA (Fine-Grained Auditing), DAC (Discretionary Access Control),\n" +
+                       "MAC (Mandatory Access Control), RBAC (Role-Based Access Control), OLS (Oracle Label Security)"
+            };
+
+            tabAdminPolicy.Controls.AddRange(new Control[] { 
+                lblInfo, dgvAdminPolicies, 
+                btnAddPolicy, btnEditPolicy, btnEnablePolicy, btnDisablePolicy, btnDeletePolicy,
+                txtInfo
+            });
+        }
+
+        private async Task LoadAdminPoliciesAsync()
+        {
+            try
+            {
+                var policies = await _dbContext.GetAdminPoliciesAsync();
+                dgvAdminPolicies.DataSource = policies.Select(p => new
+                {
+                    ID = p.PolicyId,
+                    Tên = p.PolicyName,
+                    Loại = p.PolicyType,
+                    Bảng = p.TableName,
+                    MôTả = p.Description.Length > 50 ? p.Description.Substring(0, 50) + "..." : p.Description,
+                    Function = p.PolicyFunction,
+                    Statements = p.StatementTypes,
+                    Trạng_Thái = p.IsEnabled ? "✓ Bật" : "✗ Tắt",
+                    Tạo_Bởi = p.CreatedBy,
+                    Ngày_Tạo = p.CreatedAt.ToString("dd/MM/yyyy HH:mm")
+                }).ToList();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi tải policies từ ADMIN_POLICY: {ex.Message}\n\nCó thể bảng ADMIN_POLICY chưa được tạo.", 
+                    "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void ShowAddAdminPolicyDialog()
+        {
+            using var dlg = new Form
+            {
+                Text = "Thêm Policy mới",
+                Size = new Size(550, 450),
+                StartPosition = FormStartPosition.CenterParent,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                MaximizeBox = false,
+                MinimizeBox = false,
+                BackColor = Color.White,
+                Font = new Font("Segoe UI", 9F)
+            };
+
+            var lblTitle = new Label { Text = "Thêm Policy mới vào ADMIN_POLICY", Font = new Font("Segoe UI", 12F, FontStyle.Bold), Location = new Point(20, 15), AutoSize = true, ForeColor = Color.FromArgb(0, 132, 255) };
+
+            var lblName = new Label { Text = "Tên Policy:", Location = new Point(20, 55), AutoSize = true };
+            var txtName = new TextBox { Location = new Point(150, 52), Size = new Size(350, 25) };
+
+            var lblType = new Label { Text = "Loại Policy:", Location = new Point(20, 90), AutoSize = true };
+            var cboType = new ComboBox { Location = new Point(150, 87), Size = new Size(350, 25), DropDownStyle = ComboBoxStyle.DropDownList };
+            cboType.Items.AddRange(new object[] { "VPD", "FGA", "DAC", "MAC", "RBAC", "OLS" });
+            cboType.SelectedIndex = 0;
+
+            var lblTable = new Label { Text = "Bảng áp dụng:", Location = new Point(20, 125), AutoSize = true };
+            var cboTable = new ComboBox { Location = new Point(150, 122), Size = new Size(350, 25), DropDownStyle = ComboBoxStyle.DropDownList };
+            cboTable.Items.AddRange(new object[] { "TINNHAN", "TAIKHOAN", "CUOCTROCHUYEN", "THANHVIEN", "ATTACHMENT", "AUDIT_LOGS", "NGUOIDUNG" });
+            cboTable.SelectedIndex = 0;
+
+            var lblDesc = new Label { Text = "Mô tả:", Location = new Point(20, 160), AutoSize = true };
+            var txtDesc = new TextBox { Location = new Point(150, 157), Size = new Size(350, 60), Multiline = true };
+
+            var lblFunc = new Label { Text = "Policy Function:", Location = new Point(20, 230), AutoSize = true };
+            var txtFunc = new TextBox { Location = new Point(150, 227), Size = new Size(350, 25) };
+
+            var lblStmt = new Label { Text = "Statement Types:", Location = new Point(20, 265), AutoSize = true };
+            var txtStmt = new TextBox { Location = new Point(150, 262), Size = new Size(350, 25), Text = "SELECT,INSERT,UPDATE,DELETE" };
+
+            var btnAdd = new Button
+            {
+                Text = "Thêm",
+                Size = new Size(100, 35),
+                Location = new Point(300, 350),
+                BackColor = Color.FromArgb(40, 167, 69),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand
+            };
+            btnAdd.FlatAppearance.BorderSize = 0;
+
+            var btnCancel = new Button
+            {
+                Text = "Hủy",
+                Size = new Size(100, 35),
+                Location = new Point(410, 350),
+                BackColor = Color.FromArgb(108, 117, 125),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                DialogResult = DialogResult.Cancel,
+                Cursor = Cursors.Hand
+            };
+            btnCancel.FlatAppearance.BorderSize = 0;
+
+            btnAdd.Click += async (s, e) =>
+            {
+                if (string.IsNullOrWhiteSpace(txtName.Text))
+                {
+                    MessageBox.Show("Vui lòng nhập tên policy.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                try
+                {
+                    var policyId = await _dbContext.CreateAdminPolicyAsync(
+                        txtName.Text.Trim(),
+                        cboType.SelectedItem?.ToString() ?? "VPD",
+                        cboTable.SelectedItem?.ToString() ?? "TINNHAN",
+                        txtDesc.Text.Trim(),
+                        string.IsNullOrWhiteSpace(txtFunc.Text) ? null : txtFunc.Text.Trim(),
+                        string.IsNullOrWhiteSpace(txtStmt.Text) ? null : txtStmt.Text.Trim(),
+                        _adminUsername
+                    );
+
+                    await _dbContext.LogPolicyChangeAsync(policyId, "CREATE", _adminUsername, null, txtName.Text, "Tạo policy mới từ Admin Panel");
+                    await _dbContext.WriteAuditLogAsync(_adminUsername, "ADMIN_CREATE_POLICY", txtName.Text, 0);
+
+                    MessageBox.Show("Đã thêm policy thành công!", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    dlg.DialogResult = DialogResult.OK;
+                    dlg.Close();
+                    await LoadAdminPoliciesAsync();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Lỗi: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+
+            dlg.Controls.AddRange(new Control[] { lblTitle, lblName, txtName, lblType, cboType, lblTable, cboTable, lblDesc, txtDesc, lblFunc, txtFunc, lblStmt, txtStmt, btnAdd, btnCancel });
+            dlg.CancelButton = btnCancel;
+            dlg.ShowDialog(this);
+        }
+
+        private void ShowEditAdminPolicyDialog()
+        {
+            if (dgvAdminPolicies.SelectedRows.Count == 0)
+            {
+                MessageBox.Show("Vui lòng chọn một policy để sửa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var row = dgvAdminPolicies.SelectedRows[0];
+            var policyIdStr = row.Cells["ID"].Value?.ToString();
+            if (!int.TryParse(policyIdStr, out var policyId)) return;
+
+            var policyName = row.Cells["Tên"].Value?.ToString() ?? "";
+            var description = row.Cells["MôTả"].Value?.ToString() ?? "";
+            var statements = row.Cells["Statements"].Value?.ToString() ?? "";
+
+            using var dlg = new Form
+            {
+                Text = "Sửa Policy",
+                Size = new Size(450, 300),
+                StartPosition = FormStartPosition.CenterParent,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                MaximizeBox = false,
+                MinimizeBox = false,
+                BackColor = Color.White,
+                Font = new Font("Segoe UI", 9F)
+            };
+
+            var lblTitle = new Label { Text = $"Sửa Policy: {policyName}", Font = new Font("Segoe UI", 12F, FontStyle.Bold), Location = new Point(20, 15), AutoSize = true, ForeColor = Color.FromArgb(0, 132, 255) };
+
+            var lblDesc = new Label { Text = "Mô tả:", Location = new Point(20, 60), AutoSize = true };
+            var txtDesc = new TextBox { Location = new Point(150, 57), Size = new Size(260, 60), Multiline = true, Text = description };
+
+            var lblStmt = new Label { Text = "Statement Types:", Location = new Point(20, 130), AutoSize = true };
+            var txtStmt = new TextBox { Location = new Point(150, 127), Size = new Size(260, 25), Text = statements };
+
+            var btnSave = new Button
+            {
+                Text = "Lưu",
+                Size = new Size(100, 35),
+                Location = new Point(200, 200),
+                BackColor = Color.FromArgb(40, 167, 69),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat
+            };
+            btnSave.FlatAppearance.BorderSize = 0;
+
+            var btnCancel = new Button
+            {
+                Text = "Hủy",
+                Size = new Size(100, 35),
+                Location = new Point(310, 200),
+                BackColor = Color.FromArgb(108, 117, 125),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                DialogResult = DialogResult.Cancel
+            };
+            btnCancel.FlatAppearance.BorderSize = 0;
+
+            btnSave.Click += async (s, e) =>
+            {
+                try
+                {
+                    await _dbContext.UpdateAdminPolicyAsync(policyId, txtDesc.Text.Trim(), txtStmt.Text.Trim(), null);
+                    await _dbContext.LogPolicyChangeAsync(policyId, "UPDATE", _adminUsername, description, txtDesc.Text, "Cập nhật từ Admin Panel");
+                    await _dbContext.WriteAuditLogAsync(_adminUsername, "ADMIN_UPDATE_POLICY", policyName, 0);
+
+                    MessageBox.Show("Đã cập nhật policy!", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    dlg.DialogResult = DialogResult.OK;
+                    dlg.Close();
+                    await LoadAdminPoliciesAsync();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Lỗi: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+
+            dlg.Controls.AddRange(new Control[] { lblTitle, lblDesc, txtDesc, lblStmt, txtStmt, btnSave, btnCancel });
+            dlg.CancelButton = btnCancel;
+            dlg.ShowDialog(this);
+        }
+
+        private async Task ToggleAdminPolicyAsync(bool enable)
+        {
+            if (dgvAdminPolicies.SelectedRows.Count == 0)
+            {
+                MessageBox.Show("Vui lòng chọn một policy.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var row = dgvAdminPolicies.SelectedRows[0];
+            var policyIdStr = row.Cells["ID"].Value?.ToString();
+            if (!int.TryParse(policyIdStr, out var policyId)) return;
+
+            var policyName = row.Cells["Tên"].Value?.ToString() ?? "";
+
+            try
+            {
+                await _dbContext.ToggleAdminPolicyAsync(policyId, enable);
+                await _dbContext.LogPolicyChangeAsync(policyId, enable ? "ENABLE" : "DISABLE", _adminUsername, null, null, "Thay đổi trạng thái từ Admin Panel");
+                await _dbContext.WriteAuditLogAsync(_adminUsername, enable ? "ADMIN_ENABLE_POLICY" : "ADMIN_DISABLE_POLICY", policyName, 0);
+
+                MessageBox.Show($"Policy đã được {(enable ? "bật" : "tắt")}!", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                await LoadAdminPoliciesAsync();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private async Task DeleteAdminPolicyAsync()
+        {
+            if (dgvAdminPolicies.SelectedRows.Count == 0)
+            {
+                MessageBox.Show("Vui lòng chọn một policy để xóa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var row = dgvAdminPolicies.SelectedRows[0];
+            var policyIdStr = row.Cells["ID"].Value?.ToString();
+            if (!int.TryParse(policyIdStr, out var policyId)) return;
+
+            var policyName = row.Cells["Tên"].Value?.ToString() ?? "";
+
+            if (MessageBox.Show($"Bạn có chắc chắn muốn xóa policy '{policyName}'?\n\nLưu ý: Không thể hoàn tác!", 
+                "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+                return;
+
+            try
+            {
+                await _dbContext.LogPolicyChangeAsync(policyId, "DELETE", _adminUsername, policyName, null, "Xóa từ Admin Panel");
+                await _dbContext.DeleteAdminPolicyAsync(policyId);
+                await _dbContext.WriteAuditLogAsync(_adminUsername, "ADMIN_DELETE_POLICY", policyName, 0);
+
+                MessageBox.Show("Policy đã được xóa!", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                await LoadAdminPoliciesAsync();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        #endregion
+
+        #region Policy Change Logs
+
+        private void SetupPolicyLogsTab()
+        {
+            var lblInfo = new Label
+            {
+                Text = "Lịch sử thay đổi Policies (POLICY_CHANGE_LOG)",
+                Location = new Point(10, 10),
+                AutoSize = true,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold)
+            };
+
+            dgvPolicyLogs = new DataGridView
+            {
+                Location = new Point(10, 40),
+                Size = new Size(900, 400),
+                AllowUserToAddRows = false,
+                AllowUserToDeleteRows = false,
+                ReadOnly = true,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                BackgroundColor = Color.White
+            };
+
+            var txtInfo = new TextBox
+            {
+                Location = new Point(10, 450),
+                Size = new Size(900, 30),
+                Multiline = false,
+                ReadOnly = true,
+                BackColor = Color.FromArgb(245, 247, 250),
+                Text = "Theo dõi tất cả các thay đổi policy: CREATE, UPDATE, DELETE, ENABLE, DISABLE"
+            };
+
+            tabPolicyLogs.Controls.AddRange(new Control[] { lblInfo, dgvPolicyLogs, txtInfo });
+        }
+
+        private async Task LoadPolicyLogsAsync()
+        {
+            try
+            {
+                var logs = await _dbContext.GetPolicyChangeLogsAsync();
+                dgvPolicyLogs.DataSource = logs.Select(l => new
+                {
+                    ID = l.LogId,
+                    Policy = l.PolicyName,
+                    Hành_Động = l.Action,
+                    Người_Thực_Hiện = l.ChangedBy,
+                    Thời_Gian = l.ChangedAt.ToString("dd/MM/yyyy HH:mm:ss"),
+                    Giá_Trị_Cũ = l.OldValue.Length > 30 ? l.OldValue.Substring(0, 30) + "..." : l.OldValue,
+                    Giá_Trị_Mới = l.NewValue.Length > 30 ? l.NewValue.Substring(0, 30) + "..." : l.NewValue,
+                    Lý_Do = l.Reason
+                }).ToList();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi tải policy logs: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        #endregion
+
         private async Task RefreshCurrentTabAsync()
         {
             if (tabControl.SelectedTab == tabVPD)
@@ -840,6 +1299,14 @@ namespace ChatServer.Forms
             else if (tabControl.SelectedTab == tabFGA)
             {
                 await LoadFGAPoliciesAsync();
+            }
+            else if (tabControl.SelectedTab == tabAdminPolicy)
+            {
+                await LoadAdminPoliciesAsync();
+            }
+            else if (tabControl.SelectedTab == tabPolicyLogs)
+            {
+                await LoadPolicyLogsAsync();
             }
         }
     }
