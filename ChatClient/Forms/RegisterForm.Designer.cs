@@ -39,6 +39,8 @@ namespace ChatClient.Forms
             this.txtEmail = new System.Windows.Forms.TextBox();
             this.lblHovaten = new System.Windows.Forms.Label();
             this.txtHovaten = new System.Windows.Forms.TextBox();
+            this.lblSdt = new System.Windows.Forms.Label();
+            this.txtSdt = new System.Windows.Forms.TextBox();
             this.lblClearance = new System.Windows.Forms.Label();
             this.cbClearance = new System.Windows.Forms.ComboBox();
             this.btnRegister = new System.Windows.Forms.Button();
@@ -138,13 +140,29 @@ namespace ChatClient.Forms
             this.txtHovaten.Size = new System.Drawing.Size(250, 23);
             this.txtHovaten.TabIndex = 10;
             // 
+            // lblSdt
+            // 
+            this.lblSdt.AutoSize = true;
+            this.lblSdt.Location = new System.Drawing.Point(20, 260);
+            this.lblSdt.Name = "lblSdt";
+            this.lblSdt.Size = new System.Drawing.Size(76, 15);
+            this.lblSdt.TabIndex = 11;
+            this.lblSdt.Text = "Số điện thoại:";
+            // 
+            // txtSdt
+            // 
+            this.txtSdt.Location = new System.Drawing.Point(150, 257);
+            this.txtSdt.Name = "txtSdt";
+            this.txtSdt.Size = new System.Drawing.Size(250, 23);
+            this.txtSdt.TabIndex = 12;
+            // 
             // lblClearance
             // 
             this.lblClearance.AutoSize = true;
-            this.lblClearance.Location = new System.Drawing.Point(20, 260);
+            this.lblClearance.Location = new System.Drawing.Point(20, 300);
             this.lblClearance.Name = "lblClearance";
             this.lblClearance.Size = new System.Drawing.Size(95, 15);
-            this.lblClearance.TabIndex = 11;
+            this.lblClearance.TabIndex = 13;
             this.lblClearance.Text = "Mức độ bảo mật:";
             // 
             // cbClearance
@@ -154,26 +172,26 @@ namespace ChatClient.Forms
             this.cbClearance.Items.AddRange(new object[] {
             "1 - LOW",
             "2 - MEDIUM"});
-            this.cbClearance.Location = new System.Drawing.Point(150, 257);
+            this.cbClearance.Location = new System.Drawing.Point(150, 297);
             this.cbClearance.Name = "cbClearance";
             this.cbClearance.Size = new System.Drawing.Size(250, 23);
-            this.cbClearance.TabIndex = 12;
+            this.cbClearance.TabIndex = 14;
             // 
             // btnRegister
             // 
-            this.btnRegister.Location = new System.Drawing.Point(150, 300);
+            this.btnRegister.Location = new System.Drawing.Point(150, 340);
             this.btnRegister.Name = "btnRegister";
             this.btnRegister.Size = new System.Drawing.Size(100, 35);
-            this.btnRegister.TabIndex = 13;
+            this.btnRegister.TabIndex = 15;
             this.btnRegister.Text = "Đăng ký";
             this.btnRegister.UseVisualStyleBackColor = true;
             // 
             // btnCancel
             // 
-            this.btnCancel.Location = new System.Drawing.Point(260, 300);
+            this.btnCancel.Location = new System.Drawing.Point(260, 340);
             this.btnCancel.Name = "btnCancel";
             this.btnCancel.Size = new System.Drawing.Size(100, 35);
-            this.btnCancel.TabIndex = 14;
+            this.btnCancel.TabIndex = 16;
             this.btnCancel.Text = "Hủy";
             this.btnCancel.UseVisualStyleBackColor = true;
             // 
@@ -181,21 +199,23 @@ namespace ChatClient.Forms
             // 
             this.lblStatus.AutoSize = true;
             this.lblStatus.ForeColor = System.Drawing.Color.Red;
-            this.lblStatus.Location = new System.Drawing.Point(20, 350);
+            this.lblStatus.Location = new System.Drawing.Point(20, 390);
             this.lblStatus.Name = "lblStatus";
             this.lblStatus.Size = new System.Drawing.Size(0, 15);
-            this.lblStatus.TabIndex = 13;
+            this.lblStatus.TabIndex = 17;
             // 
             // RegisterForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(120F, 120F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
-            this.ClientSize = new System.Drawing.Size(450, 420);
+            this.ClientSize = new System.Drawing.Size(450, 460);
             this.Controls.Add(this.lblStatus);
             this.Controls.Add(this.btnCancel);
             this.Controls.Add(this.btnRegister);
             this.Controls.Add(this.cbClearance);
             this.Controls.Add(this.lblClearance);
+            this.Controls.Add(this.txtSdt);
+            this.Controls.Add(this.lblSdt);
             this.Controls.Add(this.txtEmail);
             this.Controls.Add(this.lblEmail);
             this.Controls.Add(this.txtHovaten);
@@ -230,6 +250,8 @@ namespace ChatClient.Forms
         private System.Windows.Forms.TextBox txtEmail;
         private System.Windows.Forms.Label lblHovaten;
         private System.Windows.Forms.TextBox txtHovaten;
+        private System.Windows.Forms.Label lblSdt;
+        private System.Windows.Forms.TextBox txtSdt;
         private System.Windows.Forms.Label lblClearance;
         private System.Windows.Forms.ComboBox cbClearance;
         private System.Windows.Forms.Button btnRegister;

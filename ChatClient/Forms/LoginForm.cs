@@ -208,14 +208,24 @@ namespace ChatClient.Forms
                 {
                     var errorMessage = response?.Message ?? "Lỗi kết nối server.";
                     
-                    // Check if user is banned
-                    if (errorMessage.Contains("bị cấm") || errorMessage.Contains("banned") || errorMessage.Contains("bị khóa"))
+                    // Check if user is banned by ADMIN (not locked due to failed attempts)
+                    // "banned" = bị cấm bởi Admin, "Tài khoản bị khóa 30 phút" = lockout do sai password
+                    if (errorMessage.Contains("banned") || errorMessage.Contains("has been banned"))
                     {
-                        lblStatus.Text = "❌ Tài khoản của bạn đã bị khóa!";
-                        MessageBox.Show("Tài khoản của bạn đã bị quản trị viên khóa.\nVui lòng liên hệ admin để biết thêm chi tiết.",
-                                      "Tài khoản bị khóa",
+                        lblStatus.Text = "❌ Tài khoản đã bị cấm bởi Admin!";
+                        MessageBox.Show("Tài khoản của bạn đã bị quản trị viên cấm.\nVui lòng liên hệ admin để biết thêm chi tiết.",
+                                      "Tài khoản bị cấm",
                                       MessageBoxButtons.OK,
                                       MessageBoxIcon.Stop);
+                        btnLogin.Enabled = true;
+                        return;
+                    }
+                    
+                    // Check if account is locked due to too many failed attempts
+                    if (errorMessage.Contains("Tài khoản bị khóa 30 phút") || errorMessage.Contains("khóa tạm thời"))
+                    {
+                        lblStatus.Text = "🔒 Tài khoản bị khóa tạm thời!";
+                        MessageBox.Show(errorMessage, "Khóa tạm thời", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         btnLogin.Enabled = true;
                         return;
                     }

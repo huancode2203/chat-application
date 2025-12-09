@@ -63,9 +63,17 @@ namespace ChatServer.Services
                         break;
                     }
 
+                    // === ENCRYPTION LOG ===
+                    Console.WriteLine($"[SERVER][AES] <<< FROM CLIENT (encrypted): {encryptedLine.Substring(0, Math.Min(60, encryptedLine.Length))}...");
+                    
                     var json = EncryptionHelper.Decrypt(encryptedLine);
+                    Console.WriteLine($"[SERVER][AES] --- DECRYPTED: {json.Substring(0, Math.Min(100, json.Length))}...");
+                    
                     var responseJson = await _chatProcessingService.HandleRequestAsync(json);
                     var responseEncrypted = EncryptionHelper.Encrypt(responseJson);
+                    
+                    Console.WriteLine($"[SERVER][AES] >>> TO CLIENT (encrypted): {responseEncrypted.Substring(0, Math.Min(60, responseEncrypted.Length))}...");
+                    
                     await writer.WriteLineAsync(responseEncrypted);
                 }
             }

@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net9.0-windows</TargetFramework>
@@ -9,19 +9,15 @@
 
   <ItemGroup>
     <EmbeddedResource Remove="Forms\ChatForm.Bubbles.resx" />
-    <None Include="Forms\ChatForm.Bubbles.resx" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Remove="Forms\ChatForm.UIEnhancements.resx" />
-    <None Include="Forms\ChatForm.UIEnhancements.resx" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Remove="Forms\ChatForm.Attachments.resx" />
-    <None Include="Forms\ChatForm.Attachments.resx" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Remove="Forms\ChatForm.Features.resx" />
-    <None Include="Forms\ChatForm.Features.resx" />
   </ItemGroup>
 </Project>
 

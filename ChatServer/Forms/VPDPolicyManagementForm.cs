@@ -38,15 +38,6 @@ namespace ChatServer.Forms
             _ = LoadVPDPoliciesAsync();
         }
 
-        private void InitializeComponent()
-        {
-            this.Text = "Quản lý VPD/RLS/FGA Policies";
-            this.Size = new Size(1000, 700);
-            this.StartPosition = FormStartPosition.CenterScreen;
-            this.BackColor = Color.White;
-            this.Font = new Font("Segoe UI", 9F);
-        }
-
         private void SetupUI()
         {
             lblTitle = new Label

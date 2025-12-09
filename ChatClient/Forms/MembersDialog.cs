@@ -17,21 +17,6 @@ namespace ChatClient.Forms
         private string _currentOwner = string.Empty;
         private ContextMenuStrip _contextMenu = null!;
 
-        // Controls
-        private ListView lstMembers = null!;
-        private ColumnHeader colUsername = null!;
-        private ColumnHeader colEmail = null!;
-        private ColumnHeader colRole = null!;
-        private ColumnHeader colBanStatus = null!;
-        private ColumnHeader colJoinedDate = null!;
-        private Button btnAddMember = null!;
-        private Button btnRemoveMember = null!;
-        private Button btnBanMember = null!;
-        private Button btnUnbanMember = null!;
-        private Button btnClose = null!;
-        private Label lblStatus = null!;
-        private Label lblTitle = null!;
-
         public MembersDialog(SocketClientService socketClient, User currentUser, string conversationId, bool isPrivateChat = false)
         {
             _socketClient = socketClient;
@@ -53,109 +38,6 @@ namespace ChatClient.Forms
                 btnUnbanMember.Visible = false;
                 lblTitle.Text = "👥 Thành Viên Cuộc Trò Chuyện";
             }
-        }
-
-        private void InitializeComponent()
-        {
-            lstMembers = new ListView();
-            colUsername = new ColumnHeader();
-            colEmail = new ColumnHeader();
-            colRole = new ColumnHeader();
-            colBanStatus = new ColumnHeader();
-            colJoinedDate = new ColumnHeader();
-            btnAddMember = new Button();
-            btnRemoveMember = new Button();
-            btnBanMember = new Button();
-            btnUnbanMember = new Button();
-            btnClose = new Button();
-            lblStatus = new Label();
-            lblTitle = new Label();
-            SuspendLayout();
-
-            // lstMembers
-            lstMembers.Columns.AddRange(new ColumnHeader[] { colUsername, colEmail, colRole, colBanStatus, colJoinedDate });
-            lstMembers.FullRowSelect = true;
-            lstMembers.GridLines = true;
-            lstMembers.Location = new Point(20, 70);
-            lstMembers.MultiSelect = false;
-            lstMembers.Name = "lstMembers";
-            lstMembers.Size = new Size(760, 450);
-            lstMembers.TabIndex = 0;
-            lstMembers.UseCompatibleStateImageBehavior = false;
-            lstMembers.View = View.Details;
-
-            // Columns
-            colUsername.Text = "Người dùng";
-            colUsername.Width = 150;
-            colEmail.Text = "Email";
-            colEmail.Width = 180;
-            colRole.Text = "Vai trò";
-            colRole.Width = 120;
-            colBanStatus.Text = "Trạng thái";
-            colBanStatus.Width = 120;
-            colJoinedDate.Text = "Ngày tham gia";
-            colJoinedDate.Width = 140;
-
-            // btnAddMember
-            btnAddMember.Location = new Point(20, 540);
-            btnAddMember.Size = new Size(130, 40);
-            btnAddMember.Text = "➕ Thêm";
-
-            // btnRemoveMember
-            btnRemoveMember.Enabled = false;
-            btnRemoveMember.Location = new Point(160, 540);
-            btnRemoveMember.Size = new Size(130, 40);
-            btnRemoveMember.Text = "❌ Xóa";
-
-            // btnBanMember (now Mute)
-            btnBanMember.Enabled = false;
-            btnBanMember.Location = new Point(300, 540);
-            btnBanMember.Size = new Size(130, 40);
-            btnBanMember.Text = "🔇 Tắt tiếng";
-
-            // btnUnbanMember (now Unmute)
-            btnUnbanMember.Enabled = false;
-            btnUnbanMember.Location = new Point(440, 540);
-            btnUnbanMember.Size = new Size(130, 40);
-            btnUnbanMember.Text = "🔊 Bỏ tắt tiếng";
-
-            // btnClose
-            btnClose.Location = new Point(650, 540);
-            btnClose.Size = new Size(130, 40);
-            btnClose.Text = "Đóng";
-
-            // lblStatus
-            lblStatus.AutoSize = true;
-            lblStatus.Location = new Point(20, 595);
-            lblStatus.Size = new Size(200, 25);
-
-            // lblTitle
-            lblTitle.Font = new Font("Segoe UI", 14F, FontStyle.Bold);
-            lblTitle.ForeColor = Color.FromArgb(28, 30, 33);
-            lblTitle.Location = new Point(20, 15);
-            lblTitle.Size = new Size(760, 40);
-            lblTitle.Text = "👥 Quản Lý Thành Viên";
-
-            // MembersDialog
-            AutoScaleDimensions = new SizeF(8F, 20F);
-            AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(800, 630);
-            Controls.Add(lblTitle);
-            Controls.Add(lblStatus);
-            Controls.Add(btnClose);
-            Controls.Add(btnUnbanMember);
-            Controls.Add(btnBanMember);
-            Controls.Add(btnRemoveMember);
-            Controls.Add(btnAddMember);
-            Controls.Add(lstMembers);
-            FormBorderStyle = FormBorderStyle.FixedDialog;
-            MaximizeBox = false;
-            MinimizeBox = false;
-            Name = "MembersDialog";
-            StartPosition = FormStartPosition.CenterParent;
-            Text = "Quản lý thành viên";
-            ResumeLayout(false);
-            PerformLayout();
         }
 
         private void ApplyModernStyling()

@@ -39,6 +39,7 @@ namespace ChatClient.Forms
             var confirmPassword = txtConfirmPassword.Text.Trim();
             var email = txtEmail.Text.Trim();
             var hovaten = txtHovaten.Text.Trim();
+            var sdt = txtSdt.Text.Trim();
             var clearanceLevel = cbClearance.SelectedIndex + 1;
 
             if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password) ||
@@ -75,7 +76,7 @@ namespace ChatClient.Forms
                 using var socketClient = new SocketClientService("127.0.0.1", 9000);
                 await socketClient.ConnectAsync();
 
-                var response = await socketClient.RegisterAsync(username, password, email, clearanceLevel, hovaten);
+                var response = await socketClient.RegisterAsync(username, password, email, clearanceLevel, hovaten, sdt);
                 if (response == null || !response.Success)
                 {
                     lblStatus.Text = response?.Message ?? "Lỗi đăng ký.";

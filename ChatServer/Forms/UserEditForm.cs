@@ -10,7 +10,7 @@ namespace ChatServer.Forms
     /// Form để tạo mới hoặc chỉnh sửa thông tin người dùng
     /// Đồng bộ với bảng TAIKHOAN và NGUOIDUNG trong schema
     /// </summary>
-    public class UserEditForm : Form
+    public partial class UserEditForm : Form
     {
         private readonly DbContext _dbContext;
         private readonly string? _existingMatkOrUsername;
@@ -43,6 +43,7 @@ namespace ChatServer.Forms
             _existingMatkOrUsername = existingMatkOrUsername;
             _isEditMode = !string.IsNullOrEmpty(existingMatkOrUsername);
 
+            InitializeComponent();
             InitializeUI();
             
             if (_isEditMode)
@@ -53,15 +54,8 @@ namespace ChatServer.Forms
 
         private void InitializeUI()
         {
+            // Update form title based on mode
             this.Text = _isEditMode ? "Chỉnh sửa người dùng" : "Tạo người dùng mới";
-            this.Size = new Size(950, 900);
-            this.StartPosition = FormStartPosition.CenterParent;
-            this.FormBorderStyle = FormBorderStyle.FixedDialog;
-            this.MaximizeBox = false;
-            this.MinimizeBox = false;
-            this.BackColor = Color.White;
-            this.Font = new Font("Segoe UI", 11F);
-            this.AutoScroll = true;
 
             var lblTitle = new Label
             {

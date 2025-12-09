@@ -27,6 +27,13 @@ namespace ChatClient.Forms
                 DialogResult = DialogResult.Cancel;
                 Close();
             };
+            
+            // Quay lại đăng nhập
+            lnkBackToLogin.Click += (_, _) =>
+            {
+                DialogResult = DialogResult.Cancel;
+                Close();
+            };
         }
 
         private async Task BtnSubmit_Click()

@@ -159,6 +159,32 @@ namespace ChatServer.Services
                 });
             }
 
+            // ========== RSA SIGNATURE VERIFICATION (Optional) ==========
+            // Nếu client gửi signature, verify để xác thực người gửi
+            if (!string.IsNullOrEmpty(request.Signature) && !string.IsNullOrEmpty(request.PublicKey))
+            {
+                try
+                {
+                    var dataToVerify = $"{request.SenderUsername}:{request.Password}";
+                    var isValid = EncryptionHelper.RsaVerifyWithPublicKey(dataToVerify, request.Signature, request.PublicKey);
+                    if (!isValid)
+                    {
+                        Console.WriteLine($"[SERVER][RSA] INVALID signature for login: {request.SenderUsername}");
+                        return JsonSerializer.Serialize(new ServerResponse
+                        {
+                            Success = false,
+                            Message = "RSA signature verification failed. Request may be tampered."
+                        });
+                    }
+                    Console.WriteLine($"[SERVER][RSA] VALID signature for login: {request.SenderUsername}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[SERVER][RSA] Signature verification error: {ex.Message}");
+                    // Continue without signature verification if error
+                }
+            }
+
             // Kiểm tra tài khoản có bị khóa do nhập sai mật khẩu quá nhiều lần không
             var lockStatus = await _dbContext.CheckAccountLockStatusAsync(request.SenderUsername);
             if (lockStatus.IsLocked)
@@ -317,19 +343,24 @@ namespace ChatServer.Services
 
             try
             {
+                // Sinh MATK tự động theo format TKxxx
+                var matk = await _dbContext.GenerateNextMatkAsync();
+                
                 await _dbContext.CreateAccountAsync(
-                    request.SenderUsername,
+                    matk,
                     request.SenderUsername,
                     passwordHash,
-                    null,
-                    clearanceLevel
+                    "VT003", // Mặc định là User role
+                    clearanceLevel,
+                    false // Chưa verified, cần OTP
                 );
 
-                // Lưu thông tin bổ sung (email, họ tên)
+                // Lưu thông tin bổ sung (email, họ tên, sdt) với chức vụ mặc định CV005 (Thực tập sinh)
                 var hovaten = string.IsNullOrWhiteSpace(request.Hovaten) ? "" : request.Hovaten;
+                var sdt = string.IsNullOrWhiteSpace(request.Sdt) ? null : request.Sdt;
                 try
                 {
-                    await _dbContext.UpdateUserInfoAsync(request.SenderUsername, request.Email, hovaten, null, null, null);
+                    await _dbContext.UpdateUserInfoAsync(request.SenderUsername, request.Email, hovaten, sdt, null, null, "CV005", null);
                 }
                 catch (Exception ex)
                 {
@@ -1288,6 +1319,9 @@ namespace ChatServer.Services
         {
             try
             {
+                // Set MAC context với admin level để bypass VPD restrictions
+                await _dbContext.SetMacContextAsync(request.SenderUsername, request.ClearanceLevel > 0 ? request.ClearanceLevel : 5);
+                
                 var users = await _dbContext.GetAllUsersAsync();
                 var userDtos = users.Select(u => new AdminUserDto
                 {
@@ -2478,6 +2512,10 @@ namespace ChatServer.Services
         public string MimeType { get; set; } = string.Empty;
         public long FileSize { get; set; }
         public int AttachmentId { get; set; }
+        
+        // ========== RSA Security ==========
+        public string Signature { get; set; } = string.Empty;      // RSA Digital Signature
+        public string PublicKey { get; set; } = string.Empty;       // Client's RSA Public Key
     }
 
     /// <summary>

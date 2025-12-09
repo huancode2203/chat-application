@@ -214,7 +214,7 @@ namespace ChatClient.Services
         /// <summary>
         /// Đăng ký tài khoản mới.
         /// </summary>
-        public async Task<ServerResponse?> RegisterAsync(string username, string password, string email, int clearanceLevel = 1, string hovaten = "")
+        public async Task<ServerResponse?> RegisterAsync(string username, string password, string email, int clearanceLevel = 1, string hovaten = "", string sdt = "")
         {
             var request = new ChatRequest
             {
@@ -223,7 +223,8 @@ namespace ChatClient.Services
                 Password = password,
                 Email = email,
                 ClearanceLevel = clearanceLevel,
-                Hovaten = hovaten
+                Hovaten = hovaten,
+                Sdt = sdt
             };
 
             var responseJson = await SendRequestAsync(request);
@@ -904,6 +905,10 @@ namespace ChatClient.Services
         public string MimeType { get; set; } = string.Empty;
         public long FileSize { get; set; }
         public int AttachmentId { get; set; }
+        
+        // ========== RSA Security ==========
+        public string Signature { get; set; } = string.Empty;      // RSA Digital Signature
+        public string PublicKey { get; set; } = string.Empty;       // Client's RSA Public Key
     }
 
     /// <summary>

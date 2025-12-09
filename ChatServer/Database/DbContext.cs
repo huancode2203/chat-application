@@ -126,34 +126,92 @@ namespace ChatServer.Database
             await cmd.ExecuteNonQueryAsync();
         }
 
+        /// <summary>
+        /// Thiết lập MAC context cho VPD policies. 
+        /// Level cao hơn sẽ bypass VPD restrictions.
+        /// </summary>
+        public async Task SetMacContextAsync(string matk, int clearanceLevel)
+        {
+            using var cmd = Connection.CreateCommand();
+            cmd.CommandText = "BEGIN SET_MAC_CONTEXT(:p_matk, :p_level); END;";
+            cmd.CommandType = CommandType.Text;
+            cmd.Parameters.Add(new OracleParameter("p_matk", OracleDbType.Varchar2) { Value = matk });
+            cmd.Parameters.Add(new OracleParameter("p_level", OracleDbType.Int32) { Value = clearanceLevel });
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+        /// <summary>
+        /// Clear MAC context (reset về mặc định)
+        /// </summary>
+        public async Task ClearMacContextAsync()
+        {
+            using var cmd = Connection.CreateCommand();
+            cmd.CommandText = "BEGIN MAC_CTX_PKG.CLEAR_CONTEXT; END;";
+            cmd.CommandType = CommandType.Text;
+            await cmd.ExecuteNonQueryAsync();
+        }
+
         // === LOGIN ATTEMPT TRACKING ===
         
         /// <summary>
         /// Kiểm tra tài khoản có bị khóa do đăng nhập sai quá nhiều lần không
+        /// Nếu lock đã hết hạn, tự động reset FAILED_LOGIN_ATTEMPTS và LOCKED_UNTIL
         /// </summary>
         public async Task<(bool IsLocked, DateTime? LockedUntil, int FailedAttempts)> CheckAccountLockStatusAsync(string username)
         {
-            using var cmd = Connection.CreateCommand();
-            cmd.CommandText = @"
-                SELECT NVL(FAILED_LOGIN_ATTEMPTS, 0), LOCKED_UNTIL 
-                FROM TAIKHOAN 
-                WHERE TENTK = :p_username OR MATK = :p_username";
-            cmd.Parameters.Add(new OracleParameter("p_username", OracleDbType.Varchar2) { Value = username });
+            // BƯỚC 1: Đọc dữ liệu hiện tại
+            int failedAttempts = 0;
+            DateTime? lockedUntil = null;
             
-            using var reader = await cmd.ExecuteReaderAsync();
-            if (await reader.ReadAsync())
+            using (var cmd = Connection.CreateCommand())
             {
-                var failedAttempts = reader.GetInt32(0);
-                var lockedUntil = reader.IsDBNull(1) ? (DateTime?)null : reader.GetDateTime(1);
-                
-                // Nếu LOCKED_UNTIL có giá trị và chưa hết hạn => vẫn bị khóa
-                if (lockedUntil.HasValue && lockedUntil.Value > DateTime.Now)
+                cmd.BindByName = true;
+                cmd.CommandText = "SELECT NVL(FAILED_LOGIN_ATTEMPTS, 0), LOCKED_UNTIL FROM TAIKHOAN WHERE TENTK = :p_username OR MATK = :p_username";
+                cmd.Parameters.Add(new OracleParameter("p_username", OracleDbType.Varchar2) { Value = username });
+                using var reader = await cmd.ExecuteReaderAsync();
+                if (await reader.ReadAsync())
                 {
-                    return (true, lockedUntil, failedAttempts);
+                    failedAttempts = reader.GetInt32(0);
+                    lockedUntil = reader.IsDBNull(1) ? null : reader.GetDateTime(1);
                 }
-                
+                else
+                {
+                    return (false, null, 0); // User không tồn tại
+                }
+            }
+            
+            Console.WriteLine($"[LOGIN] Check: User={username}, FailedAttempts={failedAttempts}, LockedUntil={lockedUntil}");
+            
+            // BƯỚC 2: Xử lý các trường hợp
+            
+            // Case 1: Chưa đủ 5 lần sai => KHÔNG KHÓA (dù LOCKED_UNTIL có giá trị gì)
+            if (failedAttempts < 5)
+            {
+                // Nếu có LOCKED_UNTIL nhưng chưa đủ 5 lần => clear nó đi (dữ liệu lỗi)
+                if (lockedUntil.HasValue)
+                {
+                    Console.WriteLine($"[LOGIN] Clearing invalid LOCKED_UNTIL (attempts={failedAttempts} < 5)");
+                    using var clearCmd = Connection.CreateCommand();
+                    clearCmd.BindByName = true;
+                    clearCmd.CommandText = "UPDATE TAIKHOAN SET LOCKED_UNTIL = NULL WHERE TENTK = :p_username OR MATK = :p_username";
+                    clearCmd.Parameters.Add(new OracleParameter("p_username", OracleDbType.Varchar2) { Value = username });
+                    await clearCmd.ExecuteNonQueryAsync();
+                }
+                Console.WriteLine($"[LOGIN] NOT locked (attempts={failedAttempts})");
                 return (false, null, failedAttempts);
             }
+            
+            // Case 2: Đủ 5 lần sai, kiểm tra LOCKED_UNTIL
+            if (lockedUntil.HasValue && lockedUntil.Value > DateTime.Now)
+            {
+                // Vẫn đang trong thời gian khóa
+                Console.WriteLine($"[LOGIN] LOCKED until {lockedUntil.Value}");
+                return (true, lockedUntil, failedAttempts);
+            }
+            
+            // Case 3: Đủ 5 lần nhưng LOCKED_UNTIL đã hết hạn hoặc null => reset
+            Console.WriteLine($"[LOGIN] Lock expired or missing, resetting...");
+            await ResetFailedLoginAsync(username);
             return (false, null, 0);
         }
 
@@ -162,25 +220,45 @@ namespace ChatServer.Database
         /// </summary>
         public async Task<(int NewFailedCount, bool IsNowLocked)> IncrementFailedLoginAsync(string username)
         {
-            using var cmd = Connection.CreateCommand();
-            // Tăng số lần sai và lấy giá trị mới
-            cmd.CommandText = @"
-                UPDATE TAIKHOAN 
-                SET FAILED_LOGIN_ATTEMPTS = NVL(FAILED_LOGIN_ATTEMPTS, 0) + 1,
-                    LOCKED_UNTIL = CASE 
-                        WHEN NVL(FAILED_LOGIN_ATTEMPTS, 0) + 1 >= 5 THEN SYSTIMESTAMP + INTERVAL '30' MINUTE
-                        ELSE LOCKED_UNTIL 
-                    END
-                WHERE TENTK = :p_username OR MATK = :p_username
-                RETURNING FAILED_LOGIN_ATTEMPTS INTO :p_count";
-            cmd.Parameters.Add(new OracleParameter("p_username", OracleDbType.Varchar2) { Value = username });
-            var countParam = new OracleParameter("p_count", OracleDbType.Int32) { Direction = System.Data.ParameterDirection.Output };
-            cmd.Parameters.Add(countParam);
+            // Step 1: Update FAILED_LOGIN_ATTEMPTS và set LOCKED_UNTIL nếu cần
+            using (var updateCmd = Connection.CreateCommand())
+            {
+                updateCmd.BindByName = true;
+                // FIX: Clear LOCKED_UNTIL nếu chưa đủ 5 lần (ELSE NULL thay vì ELSE LOCKED_UNTIL)
+                updateCmd.CommandText = @"
+                    UPDATE TAIKHOAN 
+                    SET FAILED_LOGIN_ATTEMPTS = NVL(FAILED_LOGIN_ATTEMPTS, 0) + 1,
+                        LOCKED_UNTIL = CASE 
+                            WHEN NVL(FAILED_LOGIN_ATTEMPTS, 0) + 1 >= 5 THEN SYSTIMESTAMP + INTERVAL '30' MINUTE
+                            ELSE NULL 
+                        END
+                    WHERE TENTK = :p_username OR MATK = :p_username";
+                updateCmd.Parameters.Add(new OracleParameter("p_username", OracleDbType.Varchar2) { Value = username });
+                await updateCmd.ExecuteNonQueryAsync();
+            }
             
-            await cmd.ExecuteNonQueryAsync();
+            // Step 2: Query to get the new count và kiểm tra lock status
+            using (var selectCmd = Connection.CreateCommand())
+            {
+                selectCmd.BindByName = true;
+                selectCmd.CommandText = @"
+                    SELECT NVL(FAILED_LOGIN_ATTEMPTS, 0), LOCKED_UNTIL 
+                    FROM TAIKHOAN 
+                    WHERE TENTK = :p_username OR MATK = :p_username";
+                selectCmd.Parameters.Add(new OracleParameter("p_username", OracleDbType.Varchar2) { Value = username });
+                
+                using var reader = await selectCmd.ExecuteReaderAsync();
+                if (await reader.ReadAsync())
+                {
+                    var newCount = reader.GetInt32(0);
+                    var lockedUntil = reader.IsDBNull(1) ? (DateTime?)null : reader.GetDateTime(1);
+                    // Chỉ locked khi count >= 5 VÀ LOCKED_UNTIL > NOW
+                    var isLocked = newCount >= 5 && lockedUntil.HasValue && lockedUntil.Value > DateTime.Now;
+                    return (newCount, isLocked);
+                }
+            }
             
-            var newCount = countParam.Value != DBNull.Value ? Convert.ToInt32(countParam.Value.ToString()) : 0;
-            return (newCount, newCount >= 5);
+            return (0, false);
         }
 
         /// <summary>
@@ -189,6 +267,7 @@ namespace ChatServer.Database
         public async Task ResetFailedLoginAsync(string username)
         {
             using var cmd = Connection.CreateCommand();
+            cmd.BindByName = true;
             cmd.CommandText = @"
                 UPDATE TAIKHOAN 
                 SET FAILED_LOGIN_ATTEMPTS = 0, LOCKED_UNTIL = NULL 
@@ -211,18 +290,34 @@ namespace ChatServer.Database
             await cmd.ExecuteNonQueryAsync();
         }
 
-        public async Task CreateAccountAsync(string matk, string tentk, string passwordHash, string? mavaitro, int clearanceLevel)
+        /// <summary>
+        /// Sinh MATK tự động theo format TKxxx (TK009, TK010, ...)
+        /// </summary>
+        public async Task<string> GenerateNextMatkAsync()
+        {
+            using var cmd = Connection.CreateCommand();
+            cmd.CommandText = @"
+                SELECT 'TK' || LPAD(NVL(MAX(TO_NUMBER(SUBSTR(MATK, 3))), 0) + 1, 3, '0')
+                FROM TAIKHOAN 
+                WHERE REGEXP_LIKE(MATK, '^TK[0-9]+$')";
+            var result = await cmd.ExecuteScalarAsync();
+            return result?.ToString() ?? "TK001";
+        }
+
+        public async Task CreateAccountAsync(string matk, string tentk, string passwordHash, string? mavaitro, int clearanceLevel, bool isVerified = true)
         {
             try
             {
                 using var cmd = Connection.CreateCommand();
-                cmd.CommandText = "BEGIN SP_TAO_TAIKHOAN(:p_matk, :p_tentk, :p_password_hash, :p_mavaitro, :p_clearance); END;";
+                // p_is_verified = 1 để user tạo từ admin có thể nhắn tin ngay (không cần OTP)
+                cmd.CommandText = "BEGIN SP_TAO_TAIKHOAN(:p_matk, :p_tentk, :p_password_hash, :p_mavaitro, :p_clearance, :p_is_verified); END;";
                 cmd.CommandType = CommandType.Text;
                 cmd.Parameters.Add(new OracleParameter("p_matk", OracleDbType.Varchar2) { Value = matk });
                 cmd.Parameters.Add(new OracleParameter("p_tentk", OracleDbType.Varchar2) { Value = tentk });
                 cmd.Parameters.Add(new OracleParameter("p_password_hash", OracleDbType.Varchar2) { Value = passwordHash });
                 cmd.Parameters.Add(new OracleParameter("p_mavaitro", OracleDbType.Varchar2) { Value = (object?)mavaitro ?? DBNull.Value });
                 cmd.Parameters.Add(new OracleParameter("p_clearance", OracleDbType.Int32) { Value = clearanceLevel });
+                cmd.Parameters.Add(new OracleParameter("p_is_verified", OracleDbType.Int32) { Value = isVerified ? 1 : 0 });
                 await cmd.ExecuteNonQueryAsync();
             }
             catch (Oracle.ManagedDataAccess.Client.OracleException ex)
@@ -382,7 +477,8 @@ namespace ChatServer.Database
         /// </summary>
         public async Task<string> CreateLoginSessionAsync(string matk, string? ipAddress = null)
         {
-            var maphien = $"SESSION_{Guid.NewGuid():N}".Substring(0, 50);
+            var sessionId = $"SESSION_{Guid.NewGuid():N}";
+            var maphien = sessionId.Length > 50 ? sessionId.Substring(0, 50) : sessionId;
             
             // Lấy clearance level của user
             int clearanceLevel = 1;
@@ -574,16 +670,15 @@ namespace ChatServer.Database
         /// Lưu encryption key vào bảng ENCRYPTION_KEYS
         /// </summary>
         public async Task StoreEncryptionKeyAsync(string? matk, string keyType, string keyValue, 
-            string? mactc = null, DateTime? expiresAt = null)
+            string? description = null, DateTime? expiresAt = null)
         {
             using var cmd = Connection.CreateCommand();
             cmd.CommandText = @"
-                INSERT INTO ENCRYPTION_KEYS (MATK, KEY_TYPE, KEY_VALUE, MACTC, CREATED_AT, EXPIRES_AT, IS_ACTIVE)
-                VALUES (:p_matk, :p_key_type, :p_key_value, :p_mactc, SYSTIMESTAMP, :p_expires, 1)";
+                INSERT INTO ENCRYPTION_KEYS (MATK, KEY_TYPE, KEY_VALUE, EXPIRES_AT, IS_ACTIVE)
+                VALUES (:p_matk, :p_key_type, :p_key_value, :p_expires, 1)";
             cmd.Parameters.Add(new OracleParameter("p_matk", OracleDbType.Varchar2) { Value = (object?)matk ?? DBNull.Value });
             cmd.Parameters.Add(new OracleParameter("p_key_type", OracleDbType.Varchar2) { Value = keyType });
             cmd.Parameters.Add(new OracleParameter("p_key_value", OracleDbType.Clob) { Value = keyValue });
-            cmd.Parameters.Add(new OracleParameter("p_mactc", OracleDbType.Varchar2) { Value = (object?)mactc ?? DBNull.Value });
             cmd.Parameters.Add(new OracleParameter("p_expires", OracleDbType.TimeStamp) { Value = (object?)expiresAt ?? DBNull.Value });
             await cmd.ExecuteNonQueryAsync();
         }
@@ -591,7 +686,7 @@ namespace ChatServer.Database
         /// <summary>
         /// Lấy encryption key từ bảng ENCRYPTION_KEYS
         /// </summary>
-        public async Task<string?> GetEncryptionKeyAsync(string keyType, string? matk = null, string? mactc = null)
+        public async Task<string?> GetEncryptionKeyAsync(string keyType, string? matk = null)
         {
             using var cmd = Connection.CreateCommand();
             cmd.CommandText = @"
@@ -600,12 +695,10 @@ namespace ChatServer.Database
                   AND IS_ACTIVE = 1
                   AND (EXPIRES_AT IS NULL OR EXPIRES_AT > SYSTIMESTAMP)
                   AND (:p_matk IS NULL OR MATK = :p_matk)
-                  AND (:p_mactc IS NULL OR MACTC = :p_mactc)
                 ORDER BY CREATED_AT DESC
                 FETCH FIRST 1 ROW ONLY";
             cmd.Parameters.Add(new OracleParameter("p_key_type", OracleDbType.Varchar2) { Value = keyType });
             cmd.Parameters.Add(new OracleParameter("p_matk", OracleDbType.Varchar2) { Value = (object?)matk ?? DBNull.Value });
-            cmd.Parameters.Add(new OracleParameter("p_mactc", OracleDbType.Varchar2) { Value = (object?)mactc ?? DBNull.Value });
             
             var result = await cmd.ExecuteScalarAsync();
             return result == null || result == DBNull.Value ? null : result.ToString();
@@ -728,8 +821,11 @@ namespace ChatServer.Database
             await cmd.ExecuteNonQueryAsync();
         }
 
-        public async Task<List<ConversationInfo>> GetUserConversationsAsync(string matk)
+        public async Task<List<ConversationInfo>> GetUserConversationsAsync(string matkOrUsername)
         {
+            // Resolve username to MATK if needed
+            var matk = await ResolveToMatkAsync(matkOrUsername);
+            
             using var cmd = Connection.CreateCommand();
             cmd.CommandText = @"
                 SELECT DISTINCT c.MACTC, c.TENCTC, NVL(c.MALOAICTC, 'GROUP'), c.IS_PRIVATE, 
@@ -1020,11 +1116,12 @@ namespace ChatServer.Database
 
             using var cmd = Connection.CreateCommand();
             cmd.CommandText = @"
-                SELECT tv.QUYEN, tv.MAPHANQUYEN, tv.IS_BANNED, tv.IS_MUTED,
-                       pq.CAN_ADD, pq.CAN_REMOVE, pq.CAN_DELETE, pq.CAN_BAN, pq.CAN_MUTE, pq.CAN_PROMOTE
+                SELECT tv.QUYEN, tv.MAPHANQUYEN, NVL(tv.IS_BANNED, 0), NVL(tv.IS_MUTED, 0),
+                       NVL(pq.CAN_ADD, 0), NVL(pq.CAN_REMOVE, 0), NVL(pq.CAN_DELETE, 0), 
+                       NVL(pq.CAN_BAN, 0), NVL(pq.CAN_MUTE, 0), NVL(pq.CAN_PROMOTE, 0)
                 FROM THANHVIEN tv
                 LEFT JOIN PHAN_QUYEN_NHOM pq ON tv.MAPHANQUYEN = pq.MAPHANQUYEN
-                WHERE tv.MACTC = :p_mactc AND tv.MATK = :p_matk";
+                WHERE tv.MACTC = :p_mactc AND tv.MATK = :p_matk AND NVL(tv.DELETED_BY_MEMBER, 0) = 0";
             cmd.Parameters.Add(new OracleParameter("p_mactc", OracleDbType.Varchar2) { Value = mactc });
             cmd.Parameters.Add(new OracleParameter("p_matk", OracleDbType.Varchar2) { Value = resolvedMatk });
 
@@ -1277,9 +1374,15 @@ namespace ChatServer.Database
                        NVL(n.EMAIL, ''), NVL(n.HOVATEN, ''), NVL(n.SDT, ''),
                        tk.CLEARANCELEVEL, tk.IS_BANNED_GLOBAL, NVL(tk.MAVAITRO, ''),
                        tk.NGAYTAO,
-                       CASE WHEN EXISTS (SELECT 1 FROM XACTHUCOTP x WHERE x.MATK = tk.MATK AND x.DAXACMINH = 1) THEN 1 ELSE 0 END AS IS_OTP_VERIFIED
+                       CASE WHEN EXISTS (SELECT 1 FROM XACTHUCOTP x WHERE x.MATK = tk.MATK AND x.DAXACMINH = 1) THEN 1 ELSE 0 END AS IS_OTP_VERIFIED,
+                       NVL(tk.FAILED_LOGIN_ATTEMPTS, 0),
+                       tk.LOCKED_UNTIL,
+                       NVL(cv.TENCV, ''),
+                       NVL(pb.TENPB, '')
                 FROM TAIKHOAN tk
                 LEFT JOIN NGUOIDUNG n ON tk.MATK = n.MATK
+                LEFT JOIN CHUCVU cv ON n.MACV = cv.MACV
+                LEFT JOIN PHONGBAN pb ON n.MAPB = pb.MAPB
                 ORDER BY tk.NGAYTAO DESC";
             
             var result = new List<AdminUserInfo>();
@@ -1297,7 +1400,11 @@ namespace ChatServer.Database
                     IsBannedGlobal = reader.GetInt32(6) == 1,
                     Mavaitro = reader.IsDBNull(7) ? string.Empty : reader.GetString(7),
                     NgayTao = reader.GetDateTime(8),
-                    IsOtpVerified = reader.GetInt32(9) == 1
+                    IsOtpVerified = reader.GetInt32(9) == 1,
+                    FailedLoginAttempts = reader.GetInt32(10),
+                    LockedUntil = reader.IsDBNull(11) ? null : reader.GetDateTime(11),
+                    Chucvu = reader.IsDBNull(12) ? string.Empty : reader.GetString(12),
+                    Phongban = reader.IsDBNull(13) ? string.Empty : reader.GetString(13)
                 });
             }
             return result;
@@ -1336,14 +1443,14 @@ namespace ChatServer.Database
             };
         }
 
-        public async Task UpdateUserInfoAsync(string matkOrUsername, string? email, string? hovaten, string? phone, int? clearanceLevel, string? mavaitro)
+        public async Task UpdateUserInfoAsync(string matkOrUsername, string? email, string? hovaten, string? phone, int? clearanceLevel, string? mavaitro, string? macv = null, string? mapb = null)
         {
             // Resolve MATK from username if needed
             var matk = await ResolveToMatkAsync(matkOrUsername);
             
             using var cmd = Connection.CreateCommand();
             // Sử dụng stored procedure SP_CAPNHAT_NGUOIDUNG_ADMIN
-            cmd.CommandText = "BEGIN SP_CAPNHAT_NGUOIDUNG_ADMIN(:p_matk, :p_email, :p_hovaten, :p_sdt, :p_clearance, :p_mavaitro); END;";
+            cmd.CommandText = "BEGIN SP_CAPNHAT_NGUOIDUNG_ADMIN(:p_matk, :p_email, :p_hovaten, :p_sdt, :p_clearance, :p_mavaitro, :p_macv, :p_mapb); END;";
             cmd.CommandType = CommandType.Text;
             
             cmd.Parameters.Add(new OracleParameter("p_matk", OracleDbType.Varchar2) { Value = matk });
@@ -1353,6 +1460,8 @@ namespace ChatServer.Database
             // Dùng OracleDbType.Decimal cho NUMBER
             cmd.Parameters.Add(new OracleParameter("p_clearance", OracleDbType.Decimal) { Value = clearanceLevel.HasValue ? (object)clearanceLevel.Value : DBNull.Value });
             cmd.Parameters.Add(new OracleParameter("p_mavaitro", OracleDbType.Varchar2) { Value = (object?)mavaitro ?? DBNull.Value });
+            cmd.Parameters.Add(new OracleParameter("p_macv", OracleDbType.Varchar2) { Value = (object?)macv ?? DBNull.Value });
+            cmd.Parameters.Add(new OracleParameter("p_mapb", OracleDbType.Varchar2) { Value = (object?)mapb ?? DBNull.Value });
             
             await cmd.ExecuteNonQueryAsync();
         }
@@ -1994,6 +2103,11 @@ namespace ChatServer.Database
         public string Mavaitro { get; set; } = string.Empty;
         public DateTime NgayTao { get; set; }
         public bool IsOtpVerified { get; set; }
+        public int FailedLoginAttempts { get; set; }
+        public DateTime? LockedUntil { get; set; }
+        public bool IsAccountLocked => LockedUntil.HasValue && LockedUntil.Value > DateTime.Now;
+        public string Chucvu { get; set; } = string.Empty;     // Tên chức vụ
+        public string Phongban { get; set; } = string.Empty;   // Tên phòng ban
     }
 
     public class AdminConversationInfo

@@ -26,6 +26,14 @@ namespace ChatServer.Forms
             _ = Task.Run(async () =>
             {
                 await Task.Delay(100); // Small delay to ensure form is fully loaded
+                
+                // Set MAC context với admin level để bypass VPD restrictions cho toàn bộ admin session
+                try
+                {
+                    await _dbContext.SetMacContextAsync(adminUsername, clearanceLevel >= 4 ? clearanceLevel : 5);
+                }
+                catch { /* Ignore if procedure doesn't exist */ }
+                
                 if (InvokeRequired)
                 {
                     Invoke(new Action(async () => await LoadUsersAsync()));
@@ -58,6 +66,9 @@ namespace ChatServer.Forms
             
             // Policy Management button - gắn trực tiếp
             btnPolicyManagement.Click += (_, _) => OpenPolicyManagement();
+            
+            // Encryption Test button
+            btnEncryptionTest.Click += (_, _) => OpenEncryptionTest();
 
             tabControl.SelectedIndexChanged += async (_, _) => await OnTabChangedAsync();
         }
@@ -66,12 +77,12 @@ namespace ChatServer.Forms
         {
             try
             {
-                using var policyForm = new VPDPolicyManagementForm(_dbContext, _adminUsername);
+                using var policyForm = new PolicyManagementForm(_dbContext, _adminUsername);
                 policyForm.ShowDialog(this);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Lỗi mở VPD/RLS/FGA Policy Management: {ex.Message}\n\nChi tiết: {ex.StackTrace}", "Lỗi",
+                MessageBox.Show($"Lỗi mở Policy Management: {ex.Message}\n\nChi tiết: {ex.StackTrace}", "Lỗi",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -103,13 +114,18 @@ namespace ChatServer.Forms
                 
                 dgvUsers.DataSource = users.Select(u => new
                 {
+                    u.Matk,
                     u.Username,
-                    u.Email,
                     u.Hovaten,
+                    u.Chucvu,
+                    u.Phongban,
+                    u.Email,
                     u.Phone,
                     u.ClearanceLevel,
                     IsBanned = u.IsBannedGlobal ? "Có" : "Không",
                     IsVerified = u.IsOtpVerified ? "Có" : "Không",
+                    AccountLocked = u.IsAccountLocked ? $"🔒 Khóa ({u.FailedLoginAttempts} lần)" : 
+                                   (u.FailedLoginAttempts > 0 ? $"⚠️ {u.FailedLoginAttempts}/5 lần sai" : "✓ Bình thường"),
                     u.NgayTao
                 }).ToList();
                 

@@ -27,6 +27,7 @@ namespace ChatServer.Forms
         private System.Windows.Forms.Button btnRefreshLogs;
         private System.Windows.Forms.Label lblCurrentUser;
         private System.Windows.Forms.Button btnPolicyManagement;
+        private System.Windows.Forms.Button btnEncryptionTest;
 
         protected override void Dispose(bool disposing)
         {
@@ -65,6 +66,7 @@ namespace ChatServer.Forms
             btnRefreshLogs = new System.Windows.Forms.Button();
             lblCurrentUser = new System.Windows.Forms.Label();
             btnPolicyManagement = new System.Windows.Forms.Button();
+            btnEncryptionTest = new System.Windows.Forms.Button();
             tabControl.SuspendLayout();
             tabUsers.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvUsers).BeginInit();
@@ -371,6 +373,21 @@ namespace ChatServer.Forms
             btnPolicyManagement.Text = "📜 Quản lý Policy";
             btnPolicyManagement.UseVisualStyleBackColor = false;
             // 
+            // btnEncryptionTest
+            // 
+            btnEncryptionTest.BackColor = System.Drawing.Color.FromArgb(156, 39, 176);
+            btnEncryptionTest.Cursor = System.Windows.Forms.Cursors.Hand;
+            btnEncryptionTest.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            btnEncryptionTest.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
+            btnEncryptionTest.ForeColor = System.Drawing.Color.White;
+            btnEncryptionTest.Location = new System.Drawing.Point(1180, 6);
+            btnEncryptionTest.Margin = new System.Windows.Forms.Padding(4);
+            btnEncryptionTest.Name = "btnEncryptionTest";
+            btnEncryptionTest.Size = new System.Drawing.Size(240, 36);
+            btnEncryptionTest.TabIndex = 3;
+            btnEncryptionTest.Text = "🔐 Test Mã Hóa";
+            btnEncryptionTest.UseVisualStyleBackColor = false;
+            // 
             // AdminPanelForm
             // 
             AutoScaleDimensions = new System.Drawing.SizeF(144F, 144F);
@@ -379,6 +396,7 @@ namespace ChatServer.Forms
             Controls.Add(tabControl);
             Controls.Add(lblCurrentUser);
             Controls.Add(btnPolicyManagement);
+            Controls.Add(btnEncryptionTest);
             Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
             Name = "AdminPanelForm";
             StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
